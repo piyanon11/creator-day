@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<title>หนึ่งวันของครีเอเตอร์</title>
+<meta name="description" content="แบบสอบถามเชิงเกม pixel art สำหรับคนทำงานสายครีเอทีฟ ใช้เวลาประมาณ 10–12 นาที">
+<meta property="og:title" content="หนึ่งวันของครีเอเตอร์">
+<meta property="og:description" content="ย้อนเล่นวันทำงานล่าสุดของคุณ แล้วรับการ์ดตัวละครไว้แชร์">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://piyanon11.github.io/creator-day/">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --k:#2A2240; --ink:#2A2240; --ink-2:#5B5475; --paper:#FFFAEB; --paper-2:#F3EAD2;
+  --act:#3B5BDB; --act-d:#2A43A8; --sel:#FFD866; --warn:#C8453A; --ok:#2E8B57;
+  --hud:#FFFFFF; --px:3px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:"IBM Plex Sans Thai",system-ui,sans-serif;color:var(--ink);background:#1E1B4B;overflow:hidden}
+canvas.px,img.px{image-rendering:pixelated;image-rendering:crisp-edges}
+#bg{position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated}
+#app{position:relative;height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column}
+.vt{font-family:"VT323",ui-monospace,monospace;letter-spacing:.02em}
+
+/* pixel box: stepped corners via box-shadow */
+.pb{position:relative;background:var(--bgc,#fff);
+  box-shadow:0 calc(-1*var(--px)) 0 0 var(--k),0 var(--px) 0 0 var(--k),calc(-1*var(--px)) 0 0 0 var(--k),var(--px) 0 0 0 var(--k),inset 0 -4px 0 0 rgba(42,34,64,.12)}
+
+/* HUD */
+#hud{flex:0 0 auto;padding:10px 16px 0;color:var(--hud);min-height:52px}
+#hudrow{display:flex;align-items:center;gap:10px}
+#back{--bgc:#fff;border:0;font:inherit;font-size:14px;font-weight:600;color:var(--ink);padding:5px 10px;cursor:pointer;margin:3px}
+#back[hidden]{visibility:hidden;display:block}
+#stage-tag{flex:1;text-align:right;font-size:14px;font-weight:600;text-shadow:2px 2px 0 rgba(0,0,0,.35)}
+#stage-tag .vt{font-size:20px;margin-right:6px}
+#bar{--bgc:#2A2240;height:12px;margin:12px 3px 0;padding:2px}
+#bar i{display:block;height:100%;width:0;background:#FFD866;transition:width .5s steps(8)}
+#scene{flex:0 0 auto;height:92px;position:relative}
+#walker{position:absolute;bottom:-6px;width:80px;height:92px;left:6%;transition:left .7s steps(7)}
+#walker.flip{transform:scaleX(-1)}
+
+/* sheet */
+#sheet{--bgc:var(--paper);flex:1 1 auto;margin:0 3px;padding:18px 16px 0;overflow-y:auto;display:flex;flex-direction:column;min-height:0;
+  box-shadow:0 calc(-1*var(--px)) 0 0 var(--k),calc(-1*var(--px)) 0 0 0 var(--k),var(--px) 0 0 0 var(--k);background:var(--paper)}
+#qh{margin:0 0 14px}
+#qh h1{font-size:21px;line-height:1.45;font-weight:700;margin:0}
+#qh p{font-size:14px;margin:6px 0 0;color:var(--ink-2)}
+#qh .note{display:inline-block;font-size:13px;padding:2px 8px;background:#FFE7A0;margin:0 0 8px 3px;box-shadow:0 0 0 2px var(--k)}
+#content{flex:1 0 auto;padding:3px 3px 12px}
+#footer{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(255,250,235,0),var(--paper) 28%);padding:14px 3px calc(16px + env(safe-area-inset-bottom))}
+.btn{--bgc:var(--act);display:block;width:calc(100% - 6px);margin:3px;border:0;padding:14px 18px;font:inherit;font-size:17px;font-weight:700;color:#fff;cursor:pointer;
+  box-shadow:0 -3px 0 0 var(--k),0 3px 0 0 var(--k),-3px 0 0 0 var(--k),3px 0 0 0 var(--k),inset 0 -5px 0 0 var(--act-d),inset 0 3px 0 0 rgba(255,255,255,.25);background:var(--bgc)}
+.btn:active:not(:disabled){transform:translateY(2px)}
+.btn:disabled{--bgc:#BDB6CC;--act-d:#A59DB8;cursor:not-allowed;color:#F4F1FA}
+.btn.ghost{--bgc:#fff;--act-d:#E4DECF;color:var(--act)}
+.btn+.btn{margin-top:12px}
+:focus-visible{outline:3px dashed #FF9F43;outline-offset:4px}
+
+/* options */
+.opt{--bgc:#fff;display:flex;align-items:center;gap:12px;width:calc(100% - 6px);text-align:left;border:0;padding:12px 14px;margin:3px 3px 11px;font:inherit;font-size:16px;color:var(--ink);cursor:pointer;line-height:1.4}
+.opt .mk{flex:0 0 18px;height:18px;background:#fff;box-shadow:0 0 0 2px var(--k);display:grid;place-items:center}
+.opt.single .mk{width:18px}
+.opt[aria-pressed=true]{--bgc:var(--sel)}
+.opt[aria-pressed=true] .mk{background:var(--k)}
+.opt[aria-pressed=true] .mk::after{content:"";width:8px;height:8px;background:var(--sel)}
+.opt.multi[aria-pressed=true] .mk::after{content:"✓";width:auto;height:auto;background:none;color:#fff;font-size:14px;font-weight:700;line-height:1}
+.opt:active{transform:translateY(2px)}
+.opt .rk{flex:0 0 26px;height:26px;background:#fff;box-shadow:0 0 0 2px var(--k);display:grid;place-items:center;font-family:"VT323",monospace;font-size:22px}
+.opt[aria-pressed=true] .rk{background:var(--k);color:var(--sel)}
+.other{width:calc(100% - 6px);margin:3px 3px 11px;font:inherit;font-size:16px;padding:12px 14px;border:0;box-shadow:0 0 0 3px var(--k);background:#fff}
+.hintline{font-size:14px;color:var(--ink-2);margin:2px 3px 10px}
+.limit{color:var(--warn);font-weight:600}
+
+/* chips (used in activity detail) */
+.chips{display:flex;flex-wrap:wrap;gap:10px 10px;padding:3px}
+.chip{--bgc:#fff;border:0;font:inherit;font-size:15px;padding:8px 12px;color:var(--ink);cursor:pointer;margin:0 1px;
+  box-shadow:0 -2px 0 0 var(--k),0 2px 0 0 var(--k),-2px 0 0 0 var(--k),2px 0 0 0 var(--k),inset 0 -3px 0 0 rgba(42,34,64,.12);background:var(--bgc)}
+.chip[aria-pressed=true]{--bgc:var(--sel);font-weight:600}
+.chip:active{transform:translateY(1px)}
+
+/* time */
+.lcd{--bgc:#20313A;color:#9CF2B4;text-align:center;padding:12px 8px 10px;margin:3px 3px 8px}
+.lcd b{font-family:"VT323",monospace;font-weight:400;font-size:84px;line-height:.9;text-shadow:0 0 8px rgba(156,242,180,.45)}
+.lcd span{font-size:16px;margin-left:6px;color:#CFEFD8}
+.lcd small{display:block;font-size:14px;color:#CFEFD8;min-height:20px}
+.tr{display:flex;align-items:center;gap:12px;margin:16px 3px}
+.tr button{--bgc:#fff;flex:0 0 46px;height:46px;border:0;font-family:"VT323",monospace;font-size:32px;line-height:1;color:var(--ink);cursor:pointer}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:14px;background:#E6DDC4;box-shadow:0 0 0 3px var(--k);margin:0 4px;border-radius:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:30px;background:#FFD866;box-shadow:0 0 0 3px var(--k),inset 0 -4px 0 #E0A526;border:0;border-radius:0;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:22px;height:30px;background:#FFD866;border:3px solid var(--k);border-radius:0}
+.skipwrap{text-align:center;padding:4px}
+.sleeprow{--bgc:#fff;padding:12px 14px 4px;margin:3px 3px 16px}
+.sleeprow .lab{font-size:15px;color:var(--ink-2)}
+.sleeprow b{font-family:"VT323",monospace;font-weight:400;font-size:46px;line-height:1}
+.sleepsum{text-align:center;color:var(--ink-2);font-size:15px}
+
+/* faces & numbers */
+.faces{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:6px 3px}
+.face{--bgc:#fff;border:0;padding:10px 0 8px;font:inherit;font-size:13px;color:var(--ink-2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px}
+.face canvas{width:44px;height:44px}
+.face[aria-pressed=true]{--bgc:var(--sel);color:var(--ink);font-weight:600}
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:8px 3px}
+.num{--bgc:#fff;height:62px;border:0;font-family:"VT323",monospace;font-size:40px;color:var(--ink);cursor:pointer}
+.num[aria-pressed=true]{--bgc:var(--sel)}
+
+/* deck */
+.deck{position:relative;height:240px;margin:8px 6px 18px;touch-action:pan-y}
+.card{--bgc:#fff;position:absolute;inset:0;padding:30px 22px 22px;display:flex;flex-direction:column;justify-content:center;font-size:20px;font-weight:700;line-height:1.5;user-select:none;transition:transform .3s steps(5),opacity .3s steps(5)}
+.card .cnt{position:absolute;top:12px;left:18px;font-family:"VT323",monospace;font-size:22px;font-weight:400;color:var(--ink-2)}
+.card.under{transform:translate(6px,8px);opacity:.7;--bgc:var(--paper-2)}
+.dbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:0 3px}
+.dbtns button{--bgc:#fff;border:0;padding:12px 4px;font:inherit;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer}
+.dbtns button.yes{--bgc:var(--sel)}
+
+/* pairs */
+.pairq{font-size:18px;font-weight:700;margin:4px 3px 14px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 3px}
+.side{--bgc:#fff;min-height:130px;border:0;font:inherit;font-size:17px;font-weight:700;color:var(--ink);padding:14px;cursor:pointer;line-height:1.45}
+.side:active{--bgc:var(--sel)}
+.bothwrap{text-align:center;margin-top:16px}
+.dots{display:flex;gap:6px;justify-content:center;margin:18px 0 4px}
+.dots i{width:8px;height:8px;background:#D8CFB6}
+.dots i.on{background:var(--k)}
+textarea{width:calc(100% - 6px);margin:3px;min-height:140px;font:inherit;font-size:16px;padding:14px;border:0;box-shadow:0 0 0 3px var(--k);resize:vertical;background:#fff}
+
+/* bag */
+.grp{margin:4px 0 18px}
+.grph{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;margin:0 3px 10px}
+.grph canvas{width:24px;height:24px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:3px}
+.tile{--bgc:#fff;border:0;padding:10px 4px 8px;font:inherit;font-size:13px;line-height:1.3;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:92px;
+  box-shadow:0 -2px 0 0 var(--k),0 2px 0 0 var(--k),-2px 0 0 0 var(--k),2px 0 0 0 var(--k),inset 0 -4px 0 0 rgba(42,34,64,.12);background:var(--bgc)}
+.tile canvas{width:36px;height:36px}
+.tile[aria-pressed=true]{--bgc:var(--sel);font-weight:600}
+.tile .badge{position:absolute;top:-8px;right:-8px;min-width:24px;height:24px;background:var(--k);color:var(--sel);font-family:"VT323",monospace;font-size:20px;display:grid;place-items:center;padding:0 3px}
+.tile:active{transform:translateY(2px)}
+.tile.pop canvas{animation:pop .35s steps(4)}
+@keyframes pop{0%{transform:translateY(0)}50%{transform:translateY(-10px)}100%{transform:translateY(0)}}
+.bagcount{display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;margin:0 0 10px}
+.bagcount canvas{width:28px;height:28px}
+.nonewrap{padding:3px;margin-top:4px}
+
+/* activity detail */
+.ahead{--bgc:#fff;display:flex;align-items:center;gap:14px;padding:12px 14px;margin:3px 3px 18px}
+.ahead canvas{width:56px;height:56px;flex:0 0 auto}
+.ahead small{display:block;font-size:13px;color:var(--ink-2)}
+.ahead b{font-size:19px}
+.fsec{margin:0 0 20px}
+.flab{font-size:16px;font-weight:700;margin:0 3px 8px}
+.flab span{font-weight:400;font-size:13px;color:var(--ink-2);margin-left:6px}
+.slots{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:3px}
+.slot{border:0;font:inherit;cursor:pointer;padding:6px 2px 6px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;color:#fff;
+  box-shadow:0 -2px 0 0 var(--k),0 2px 0 0 var(--k),-2px 0 0 0 var(--k),2px 0 0 0 var(--k);background:var(--bgc)}
+.slot b{font-size:13px;text-shadow:1px 1px 0 rgba(0,0,0,.5)}
+.slot small{font-size:11px;opacity:.95;text-shadow:1px 1px 0 rgba(0,0,0,.5)}
+.slot canvas{width:30px;height:30px;opacity:.18}
+.slot[aria-pressed=true]{outline:3px solid var(--sel);outline-offset:2px}
+.slot[aria-pressed=true] canvas{opacity:1;animation:pop .35s steps(4)}
+.slot.dark{color:#fff}.slot.light{color:var(--ink)}
+.slot.light b,.slot.light small{text-shadow:none}
+
+/* intro */
+.intro{flex:1 0 auto;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;padding:3vh 22px 0;text-align:center;color:#fff}
+.title{--bgc:#2A2240;padding:16px 18px 14px;margin:3px;color:#fff}
+.title small{display:block;font-family:"VT323",monospace;font-size:22px;color:#FFD866;letter-spacing:.08em}
+.title h1{margin:4px 0 0;font-size:32px;line-height:1.2;font-weight:700;text-shadow:3px 3px 0 #6C4FD1}
+.introtxt{--bgc:var(--paper);color:var(--ink);padding:14px 16px;margin:22px 3px 0;font-size:16px;line-height:1.6;text-align:left}
+.introtxt p{margin:0 0 8px}
+.introtxt .small{font-size:13px;color:var(--ink-2);margin:6px 0 0}
+.introfoot{position:sticky;bottom:0;padding:16px 19px calc(18px + env(safe-area-inset-bottom));width:100%;max-width:480px;margin:0 auto;background:linear-gradient(180deg,rgba(30,27,75,0),rgba(30,27,75,.92) 35%)}
+.consent{font-size:15px;line-height:1.65}
+.consent p{margin:0 0 10px}
+.check{--bgc:#fff;display:flex;gap:12px;align-items:flex-start;padding:12px 14px;margin:3px 3px 14px;font-size:16px;cursor:pointer}
+.check input{width:22px;height:22px;accent-color:var(--k);margin-top:2px;flex:0 0 auto}
+
+/* interstitial */
+#inter{position:fixed;inset:0;display:grid;place-items:center;background:rgba(20,16,40,.86);z-index:5;pointer-events:none;opacity:0;transition:opacity .3s steps(3)}
+#inter.show{opacity:1;pointer-events:auto}
+#inter .ib{--bgc:var(--paper);text-align:center;padding:18px 28px 16px;min-width:230px}
+#inter small{display:block;font-family:"VT323",monospace;font-size:26px;color:var(--act);letter-spacing:.06em}
+#inter b{font-size:28px;font-weight:700;display:block;margin-top:2px}
+#inter canvas{width:96px;height:110px;display:block;margin:8px auto 2px}
+#inter .prog{font-family:"IBM Plex Sans Thai",sans-serif;font-size:14px;color:var(--ink-2);letter-spacing:0;margin-top:4px}
+.researcher{--bgc:#fff;padding:12px 14px;margin:6px 3px 18px;font-size:14px;line-height:1.55}
+.researcher b{display:block;font-size:15px;margin-bottom:2px}
+.researcher p{margin:0}
+.researcher a,.result a{color:var(--act);word-break:break-all}
+
+/* result */
+.result img{width:calc(100% - 6px);display:block;margin:3px}
+.result h2{font-size:18px;margin:24px 3px 6px}
+.result p{font-size:15px;color:var(--ink-2);margin:0 3px 10px;line-height:1.6}
+.inrow{display:flex;gap:12px;margin:3px}
+.inrow input{flex:1;font:inherit;font-size:16px;padding:12px 14px;border:0;box-shadow:0 0 0 3px var(--k);min-width:0;background:#fff}
+.inrow button{--bgc:var(--act);border:0;color:#fff;font:inherit;font-weight:700;padding:0 18px;cursor:pointer}
+.ok{color:var(--ok);font-size:15px;font-weight:600}
+.err{color:var(--warn);font-size:15px;font-weight:600}
+.loading{text-align:center;padding:40px 0;font-size:16px}
+.loading canvas{width:120px;height:138px;display:block;margin:0 auto 12px}
+.lineup{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;margin-top:18px;padding:0 3px}
+.lt{--bgc:#2A2240;padding:0;line-height:0;overflow:hidden}
+.lt canvas{width:100%;height:auto;display:block}
+.teaser{color:#fff;font-weight:600;font-size:15px;margin:14px 0 0;text-shadow:2px 2px 0 rgba(0,0,0,.4)}
+.avtop{text-align:center;margin:0 0 18px}
+.avprev{width:150px;height:175px;--bgc:#2A2240;padding:0}
+.avrow{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;padding:3px}
+.avopt{--bgc:#fff;border:0;padding:4px;cursor:pointer;line-height:0;box-shadow:0 -2px 0 0 var(--k),0 2px 0 0 var(--k),-2px 0 0 0 var(--k),2px 0 0 0 var(--k);background:var(--bgc)}
+.avopt[aria-pressed=true]{--bgc:var(--sel);outline:3px solid var(--k);outline-offset:2px}
+.avopt canvas{width:100%;height:auto;display:block}
+.swatch{display:block;width:100%;aspect-ratio:1;box-shadow:inset 0 0 0 2px rgba(42,34,64,.25)}
+.bgrp{margin:0 0 16px}
+.bgrp .flab{font-size:14px;color:var(--ink-2)}
+.hidden{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<canvas id="bg" class="px" aria-hidden="true"></canvas>
+<div id="app">
+  <div id="hud" class="hidden">
+    <div id="hudrow"><button id="back" class="pb" type="button">◀ ย้อน</button><span id="stage-tag"></span></div>
+    <div id="bar" class="pb"><i></i></div>
+  </div>
+  <div id="scene" class="hidden"><canvas id="walker" class="px" width="40" height="46" aria-hidden="true"></canvas></div>
+  <div id="stage" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto"></div>
+</div>
+<div id="inter"><div class="ib pb"><small id="inter-sub"></small><b id="inter-title"></b><canvas id="inter-icon" class="px" width="40" height="46"></canvas><small id="inter-prog" class="prog"></small></div></div>
+
+<script>
+const SURVEY = {"actGroups":[{"id":"move","name":"ขยับร่างกาย","cls":"สายขยับ","items":[["วิ่ง/เดิน","shoe"],["ยิม/เวท","dumbbell"],["โยคะ/พิลาทิส","mat"],["ปั่นจักรยาน","bike"],["ว่ายน้ำ","goggles"],["กีฬาทีม","ball"],["แบด/เทนนิส/พิกเคิลบอล","racket"],["ปีนผา","rope"],["เต้น","note"],["มวย/ศิลปะการต่อสู้","glove"],["เดินป่า/แคมป์","tent"]]},{"id":"play","name":"เล่นและบันเทิง","cls":"สายเล่น","items":[["เกมมือถือ","phone"],["เกมคอนโซล/PC","pad"],["บอร์ดเกม","dice"],["ดูซีรีส์/หนัง","popcorn"],["คอนเสิร์ต/เทศกาลดนตรี","ticket"],["คาราโอเกะ","mic"],["ฟังพอดแคสต์","headphones"]]},{"id":"create","name":"งานอดิเรกสร้างสรรค์","cls":"สายสร้าง","items":[["วาดรูป","brush"],["ถ่ายรูป","camera"],["เล่นดนตรี","guitar"],["งานคราฟต์","yarn"],["ทำอาหาร/อบขนม","pan"],["ปลูกต้นไม้","plant"]]},{"id":"out","name":"ออกไปข้างนอกและเข้าสังคม","cls":"สายตะลอน","items":[["คาเฟ่","cup"],["นิทรรศการ/แกลเลอรี","frame"],["เดินตลาด/ห้าง","shopbag"],["ท่องเที่ยว","suitcase"],["บาร์/ปาร์ตี้","glass"],["งานอาสา","heart"]]},{"id":"rest","name":"พักและดูแลตัวเอง","cls":"สายชาร์จพลัง","items":[["นวด/สปา","leaf"],["ซาวน่า","steam"],["นั่งสมาธิ","candle"],["อ่านหนังสือ","book"],["จดบันทึก","pencil"],["งีบ","pillow"]]},{"id":"learn","name":"เรียนรู้","cls":"สายเก็บเลเวล","items":[["เวิร์กช็อป","bulb"],["คอร์สออนไลน์","laptop"],["เรียนภาษา","speech"]]}],"scenes":[{"id":"open","name":"ก่อนเริ่ม","sky":"predawn","items":[{"type":"intro","id":"S0"},{"type":"consent","id":"C1"}]},{"id":"profile","name":"สร้างตัวละคร","sky":"dawn","items":[{"type":"avatar","id":"AV","q":"เลือกหน้าตาตัวละครของคุณ","hint":"ไม่มีผลกับคำตอบ ชุดและไอเทมจะมาจากวันของคุณตอนจบเกม"},{"type":"single","id":"P1","q":"อายุของคุณอยู่ในช่วงไหน","options":["18–21","22–29","30–37","38–45","46 ขึ้นไป"]},{"type":"single","id":"P2","q":"งานหลักของคุณอยู่สายไหน","other":"P2_other","options":["ออกแบบกราฟิกและอัตลักษณ์","โมชันและแอนิเมชัน","ภาพประกอบและงานพิมพ์","ภาพยนตร์ วิดีโอ และถ่ายภาพ","คอนเทนต์ครีเอเตอร์ออนไลน์","โฆษณาและครีเอทีฟเอเจนซี","สถาปัตยกรรมและออกแบบภายใน","ออกแบบผลิตภัณฑ์และงานฝีมือ","ซอฟต์แวร์ เกม และ UX/UI","ดนตรีและเสียง","อื่น ๆ"]},{"type":"single","id":"P3","q":"ตอนนี้คุณทำงานแบบไหน","other":"P3_other","options":["พนักงานประจำ","ทำงานอิสระ","งานประจำและรับงานอิสระด้วย","เจ้าของกิจการหรือสตูดิโอ","อื่น ๆ"]},{"type":"single","id":"P4","q":"ส่วนใหญ่คุณทำงานที่ไหน","options":["ออฟฟิศ","บ้าน","ผสมออฟฟิศกับบ้าน","ย้ายไปตามงาน"]},{"type":"single","id":"P5","q":"ใครเป็นคนกำหนดเวลาเริ่มงานของคุณ","options":["บริษัทหรือลูกค้ากำหนด","ฉันเลือกเอง แต่เปลี่ยนตามงาน","ฉันเลือกเอง และค่อนข้างคงที่"]},{"type":"single","id":"P7","q":"คุณทำงานสายนี้มากี่ปี","options":["น้อยกว่า 2 ปี","2–5 ปี","6–10 ปี","มากกว่า 10 ปี"]},{"type":"single","id":"G1","q":"ที่ทำงานหลักของคุณอยู่ย่านไหน","options":["ใจกลางกรุงเทพฯ (เช่น ปทุมวัน สาทร สีลม อโศก)","กรุงเทพฯ รอบใจกลางเมือง","กรุงเทพฯ ชานเมือง","ปริมณฑล","ต่างจังหวัด","ทำงานที่บ้าน"]},{"type":"single","id":"G1_region","q":"ที่ทำงานอยู่ภาคไหน","showIf":{"G1":"ต่างจังหวัด"},"options":["ภาคเหนือ","ภาคตะวันออกเฉียงเหนือ","ภาคกลาง","ภาคตะวันออก","ภาคตะวันตก","ภาคใต้"]},{"type":"single","id":"G2","q":"ที่พักของคุณอยู่ย่านไหน","options":["ใจกลางกรุงเทพฯ (เช่น ปทุมวัน สาทร สีลม อโศก)","กรุงเทพฯ รอบใจกลางเมือง","กรุงเทพฯ ชานเมือง","ปริมณฑล","ต่างจังหวัด"]},{"type":"single","id":"G2_region","q":"ที่พักอยู่ภาคไหน","showIf":{"G2":"ต่างจังหวัด"},"options":["ภาคเหนือ","ภาคตะวันออกเฉียงเหนือ","ภาคกลาง","ภาคตะวันออก","ภาคตะวันตก","ภาคใต้"]}]},{"id":"am","name":"ช่วงเช้า","sky":"morning","items":[{"type":"time","id":"M1","q":"วันทำงานล่าสุด คุณตื่นกี่โมง","hint":"นึกถึงวันทำงานล่าสุดที่ผ่านไปครบทั้งวันแล้ว แล้วใช้วันเดียวกันนี้ตอบไปจนจบ","min":"04:00","max":"14:00","def":"08:00"},{"type":"single","id":"RMEQ1","q":"ถ้าวางแผนวันได้เองเต็มที่ ตามจังหวะที่ตัวเองรู้สึกดีที่สุด คุณจะตื่นกี่โมง","scored":true,"options":[["05.00–06.30 น.",5],["06.30–07.45 น.",4],["07.45–09.45 น.",3],["09.45–11.00 น.",2],["11.00–12.00 น.",1]]},{"type":"single","id":"RMEQ2","q":"ครึ่งชั่วโมงแรกหลังตื่นตอนเช้า ปกติคุณรู้สึกอย่างไร","scored":true,"options":[["เหนื่อยมาก",1],["ค่อนข้างเหนื่อย",2],["ค่อนข้างสดชื่น",3],["สดชื่นมาก",4]]},{"type":"single","id":"G3","q":"ปกติคุณเดินทางไปทำงานด้วยอะไร","hint":"ถ้าใช้หลายแบบ เลือกแบบที่ใช้เวลานานที่สุด","other":"G3_other","options":["รถไฟฟ้าหรือรถไฟ","รถเมล์หรือรถตู้","รถยนต์ส่วนตัว","แท็กซี่หรือรถรับจ้างผ่านแอป","มอเตอร์ไซค์หรือวิน","เรือ","เดินหรือจักรยาน","ไม่ต้องเดินทาง","อื่น ๆ"]},{"type":"single","id":"G4","q":"เดินทางเที่ยวเดียวใช้เวลาประมาณเท่าไร","showIfNot":{"G3":"ไม่ต้องเดินทาง"},"options":["น้อยกว่า 15 นาที","15–30 นาที","31–60 นาที","มากกว่า 1 ชั่วโมง"]},{"type":"single","id":"M2","q":"วันนั้นก่อนเริ่มงาน คุณได้ออกไปข้างนอก (กลางแจ้ง) นานแค่ไหน","options":["ไม่ได้ออก","น้อยกว่า 10 นาที","10–30 นาที","มากกว่า 30 นาที"]},{"type":"emoji","id":"FEEL_AM","q":"ช่วงเช้าของวันนั้นคุณรู้สึกยังไง"}]},{"id":"mid","name":"ช่วงกลางวัน","sky":"noon","items":[{"type":"time","id":"D1","q":"วันนั้นคุณเริ่มทำงานจริงกี่โมง","min":"05:00","max":"16:00","def":"10:00"},{"type":"time","id":"D2","q":"มื้อเที่ยงวันนั้นกินกี่โมง","min":"10:00","max":"17:00","def":"12:30","skip":"ข้ามมื้อ"},{"type":"single","id":"D3","q":"กินมื้อนั้นที่ไหน","showIfNot":{"D2":"ข้ามมื้อ"},"options":["หน้าจอหรือโต๊ะทำงาน","ที่บ้าน แต่ไม่ได้อยู่หน้าจอ","ร้านหรือนอกที่ทำงาน","กินระหว่างเดินทาง"]},{"type":"single","id":"D4","q":"วันนั้น ช่วงที่คุณนั่งต่อเนื่องโดยไม่ลุกนานที่สุดคือเท่าไร","options":["น้อยกว่า 1 ชั่วโมง","1–2 ชั่วโมง","2–3 ชั่วโมง","มากกว่า 3 ชั่วโมง"]},{"type":"single","id":"D5","q":"รวมทั้งวันนั้น คุณอยู่กลางแจ้งนานแค่ไหน (เดิน ทำธุระ เดินทาง)","options":["น้อยกว่า 15 นาที","15–30 นาที","30–60 นาที","มากกว่า 1 ชั่วโมง"]},{"type":"single","id":"RMEQ4","q":"ปกติคุณรู้สึกดีที่สุดช่วงไหนของวัน","scored":true,"options":[["05.00–08.00 น.",5],["08.00–10.00 น.",4],["10.00–17.00 น.",3],["17.00–22.00 น.",2],["22.00–05.00 น.",1]]},{"type":"emoji","id":"FEEL_MID","q":"ช่วงกลางวันของวันนั้นคุณรู้สึกยังไง"}]},{"id":"pm","name":"ช่วงเย็น","sky":"dusk","items":[{"type":"time","id":"E1","q":"วันนั้นคุณเลิกงานจริง ๆ กี่โมง","min":"14:00","max":"26:00","def":"19:00","skip":"ไม่ได้เลิกจริง ทำต่อถึงดึก"},{"type":"single","id":"E2","q":"หลังเลิกงาน มีข้อความหรืองานตามมาไหม","options":["ไม่มี","มี แต่ไม่ได้ตอบ","มี และกลับไปทำงานต่อ"]},{"type":"number","id":"E3","q":"7 วันที่ผ่านมา มีกี่วันที่คุณขยับร่างกายต่อเนื่องอย่างน้อย 30 นาที","hint":"เดินเร็ว ออกกำลังกาย หรือเล่นกีฬา","min":0,"max":7},{"type":"single","id":"G5","q":"ใกล้ที่พักหรือที่ทำงาน มีสวนหรือที่เดินเล่นได้สบาย ในระยะเดินไม่เกิน 10 นาทีไหม","options":["มีทั้งสองที่","มีเฉพาะใกล้ที่พัก","มีเฉพาะใกล้ที่ทำงาน","ไม่มี","ไม่แน่ใจ"]},{"type":"emoji","id":"FEEL_PM","q":"ช่วงเย็นของวันนั้นคุณรู้สึกยังไง"}]},{"id":"bag","name":"เปิดกระเป๋ากิจกรรม","sky":"dusk","items":[{"type":"bag","id":"ACT","other":"ACT_other","exclusive":"เดือนที่ผ่านมาไม่ได้ทำกิจกรรมไหนเลย","q":"เดือนที่ผ่านมา คุณทำกิจกรรมอะไรบ้าง","hint":"แตะเก็บใส่กระเป๋าให้ครบทุกอย่างที่ทำ นอกเวลางาน"},{"type":"pick","id":"ACT_TOP","ids":["ACT_TOP1","ACT_TOP2","ACT_TOP3"],"from":"ACT","showIfCountGt":{"ACT":3},"q":"เลือก 3 อย่างที่ชอบที่สุด","hint":"แตะเรียงจากชอบมากไปน้อย"},{"type":"actdetail","id":"ACT1","k":1,"ref":"ACT_TOP1","showIfHas":"ACT_TOP1","q":"ไอเทมชิ้นที่ 1","ids":["ACT1_TIME","ACT1_DAY","ACT1_FREQ","ACT1_WITH","ACT1_COST","ACT1_GEAR","ACT1_BAR"],"fields":[{"id":"ACT1_TIME","q":"ทำช่วงไหนของวัน","type":"slots","options":["เช้า","กลางวัน","เย็น","ค่ำ","ดึก"],"hints":["05–10 น.","10–15 น.","15–19 น.","19–22 น.","หลัง 22 น."],"hint":"วางได้หลายช่อง"},{"id":"ACT1_DAY","q":"ส่วนใหญ่ทำวันไหน","type":"single","options":["วันทำงาน","วันหยุด","ทั้งสองแบบ"]},{"id":"ACT1_FREQ","q":"บ่อยแค่ไหน","type":"single","options":["เกือบทุกวัน","3–5 ครั้งต่อสัปดาห์","1–2 ครั้งต่อสัปดาห์","2–3 ครั้งต่อเดือน","เดือนละครั้งหรือน้อยกว่า"]},{"id":"ACT1_WITH","q":"ทำกับใคร","type":"multi","options":["คนเดียว","เพื่อน","คู่ชีวิต","ครอบครัว","เพื่อนร่วมงาน","กลุ่มหรือคลับ","คลาสที่มีครูสอน","สัตว์เลี้ยง"],"hint":"เลือกได้หลายข้อ"},{"id":"ACT1_COST","q":"ค่าใช้จ่ายต่อเดือนประมาณเท่าไร","type":"single","options":["ไม่มีค่าใช้จ่าย","น้อยกว่า 500 บาท","500–1,500 บาท","1,501–3,000 บาท","3,001–5,000 บาท","มากกว่า 5,000 บาท"]},{"id":"ACT1_GEAR","q":"ใช้สิ่งของหรืออุปกรณ์อะไรบ้าง","type":"multi","options":["เสื้อผ้าเฉพาะกิจกรรม","รองเท้าเฉพาะกิจกรรม","กระเป๋าใส่ของ","ขวดน้ำหรือแก้วพกพา","หูฟัง","นาฬิกาหรือแอปติดตาม","อุปกรณ์หลักของกิจกรรม","ของกินหรือเครื่องดื่ม","ไฟฉายหรือไฟส่องสว่าง","ไม่ใช้อุปกรณ์เฉพาะ"],"hint":"เลือกได้หลายข้อ","exclusive":"ไม่ใช้อุปกรณ์เฉพาะ"},{"id":"ACT1_BAR","q":"อะไรทำให้ไม่ได้ทำบ่อยกว่านี้","type":"multi","options":["งานเข้าหรือเวลาไม่แน่นอน","ไม่มีแรง","ตื่นไม่ทันหรือนอนดึก","อากาศร้อน ฝน หรือฝุ่น","ไม่มีเพื่อนหรือกลุ่ม","สถานที่ไกล","ค่าใช้จ่าย","เตรียมของยุ่งยาก","ไม่อยากเปลี่ยนชุดหรือเหงื่อออก","เหตุผลอื่น","ทำได้บ่อยพอแล้ว"],"hint":"เลือกได้สูงสุด 3 ข้อ","max":3,"exclusive":"ทำได้บ่อยพอแล้ว"}]},{"type":"actdetail","id":"ACT2","k":2,"ref":"ACT_TOP2","showIfHas":"ACT_TOP2","q":"ไอเทมชิ้นที่ 2","ids":["ACT2_TIME","ACT2_FREQ","ACT2_GEAR","ACT2_BAR"],"fields":[{"id":"ACT2_TIME","q":"ทำช่วงไหนของวัน","type":"slots","options":["เช้า","กลางวัน","เย็น","ค่ำ","ดึก"],"hints":["05–10 น.","10–15 น.","15–19 น.","19–22 น.","หลัง 22 น."],"hint":"วางได้หลายช่อง"},{"id":"ACT2_FREQ","q":"บ่อยแค่ไหน","type":"single","options":["เกือบทุกวัน","3–5 ครั้งต่อสัปดาห์","1–2 ครั้งต่อสัปดาห์","2–3 ครั้งต่อเดือน","เดือนละครั้งหรือน้อยกว่า"]},{"id":"ACT2_GEAR","q":"ใช้สิ่งของหรืออุปกรณ์อะไรบ้าง","type":"multi","options":["เสื้อผ้าเฉพาะกิจกรรม","รองเท้าเฉพาะกิจกรรม","กระเป๋าใส่ของ","ขวดน้ำหรือแก้วพกพา","หูฟัง","นาฬิกาหรือแอปติดตาม","อุปกรณ์หลักของกิจกรรม","ของกินหรือเครื่องดื่ม","ไฟฉายหรือไฟส่องสว่าง","ไม่ใช้อุปกรณ์เฉพาะ"],"hint":"เลือกได้หลายข้อ","exclusive":"ไม่ใช้อุปกรณ์เฉพาะ"},{"id":"ACT2_BAR","q":"อะไรทำให้ไม่ได้ทำบ่อยกว่านี้","type":"multi","options":["งานเข้าหรือเวลาไม่แน่นอน","ไม่มีแรง","ตื่นไม่ทันหรือนอนดึก","อากาศร้อน ฝน หรือฝุ่น","ไม่มีเพื่อนหรือกลุ่ม","สถานที่ไกล","ค่าใช้จ่าย","เตรียมของยุ่งยาก","ไม่อยากเปลี่ยนชุดหรือเหงื่อออก","เหตุผลอื่น","ทำได้บ่อยพอแล้ว"],"hint":"เลือกได้สูงสุด 3 ข้อ","max":3,"exclusive":"ทำได้บ่อยพอแล้ว"}]},{"type":"actdetail","id":"ACT3","k":3,"ref":"ACT_TOP3","showIfHas":"ACT_TOP3","q":"ไอเทมชิ้นที่ 3","ids":["ACT3_TIME","ACT3_FREQ","ACT3_GEAR","ACT3_BAR"],"fields":[{"id":"ACT3_TIME","q":"ทำช่วงไหนของวัน","type":"slots","options":["เช้า","กลางวัน","เย็น","ค่ำ","ดึก"],"hints":["05–10 น.","10–15 น.","15–19 น.","19–22 น.","หลัง 22 น."],"hint":"วางได้หลายช่อง"},{"id":"ACT3_FREQ","q":"บ่อยแค่ไหน","type":"single","options":["เกือบทุกวัน","3–5 ครั้งต่อสัปดาห์","1–2 ครั้งต่อสัปดาห์","2–3 ครั้งต่อเดือน","เดือนละครั้งหรือน้อยกว่า"]},{"id":"ACT3_GEAR","q":"ใช้สิ่งของหรืออุปกรณ์อะไรบ้าง","type":"multi","options":["เสื้อผ้าเฉพาะกิจกรรม","รองเท้าเฉพาะกิจกรรม","กระเป๋าใส่ของ","ขวดน้ำหรือแก้วพกพา","หูฟัง","นาฬิกาหรือแอปติดตาม","อุปกรณ์หลักของกิจกรรม","ของกินหรือเครื่องดื่ม","ไฟฉายหรือไฟส่องสว่าง","ไม่ใช้อุปกรณ์เฉพาะ"],"hint":"เลือกได้หลายข้อ","exclusive":"ไม่ใช้อุปกรณ์เฉพาะ"},{"id":"ACT3_BAR","q":"อะไรทำให้ไม่ได้ทำบ่อยกว่านี้","type":"multi","options":["งานเข้าหรือเวลาไม่แน่นอน","ไม่มีแรง","ตื่นไม่ทันหรือนอนดึก","อากาศร้อน ฝน หรือฝุ่น","ไม่มีเพื่อนหรือกลุ่ม","สถานที่ไกล","ค่าใช้จ่าย","เตรียมของยุ่งยาก","ไม่อยากเปลี่ยนชุดหรือเหงื่อออก","เหตุผลอื่น","ทำได้บ่อยพอแล้ว"],"hint":"เลือกได้สูงสุด 3 ข้อ","max":3,"exclusive":"ทำได้บ่อยพอแล้ว"}]},{"type":"multi","id":"B8","q":"คุณใช้หรือติดตามแบรนด์ไหนบ้าง","hint":"เลือกได้หลายข้อ จากทุกหมวด","exclusive":"ไม่มี","other":"B8_other","groups":[["ของใช้และบ้าน",["MUJI","IKEA","Loft","Daiso","Moshi Moshi"]],["แฟชั่น",["UNIQLO","Zara","H&M","COS","Pomelo","Carnival","Onitsuka Tiger"]],["กีฬาและเอาท์ดอร์",["Nike","adidas","Decathlon","lululemon","On","ASICS","HOKA","The North Face","Snow Peak","Patagonia"]],["เทคโนโลยีและแกดเจ็ต",["Apple","Samsung","Xiaomi","Garmin","Sony"]],["ความงามและดูแลตัวเอง",["Aesop","Karmakamet","Harnn","Erb","Sephora"]],["กาแฟและอาหาร",["Starbucks","Café Amazon","Roots","%Arabica"]],["แอปและบริการ",["Spotify","Netflix","Strava","Nike Run Club","Calm หรือ Headspace","ก้าวท้าใจ","Timeshifter หรือ RISE","ORI"]]],"options":["MUJI","IKEA","Loft","Daiso","Moshi Moshi","UNIQLO","Zara","H&M","COS","Pomelo","Carnival","Onitsuka Tiger","Nike","adidas","Decathlon","lululemon","On","ASICS","HOKA","The North Face","Snow Peak","Patagonia","Apple","Samsung","Xiaomi","Garmin","Sony","Aesop","Karmakamet","Harnn","Erb","Sephora","Starbucks","Café Amazon","Roots","%Arabica","Spotify","Netflix","Strava","Nike Run Club","Calm หรือ Headspace","ก้าวท้าใจ","Timeshifter หรือ RISE","ORI","อื่น ๆ","ไม่มี"]}]},{"id":"nt","name":"ช่วงค่ำ","sky":"night","items":[{"type":"single","id":"N1","q":"ช่วงค่ำของวันนั้น คุณยังทำงานอยู่ไหม (ทั้งงานหลักและงานส่วนตัว)","options":["ไม่ได้ทำ","ทำก่อน 22.00 น.","ทำช่วง 22.00–00.00 น.","ทำหลังเที่ยงคืน"]},{"type":"single","id":"N2","q":"คืนนั้น คุณวางมือถือหรือเลิกดูจอ ก่อนนอนนานแค่ไหน","options":["ดูจอจนหลับ","น้อยกว่า 15 นาที","15–30 นาที","30–60 นาที","มากกว่า 1 ชั่วโมง"]},{"type":"single","id":"RMEQ3","q":"ตอนค่ำ ปกติคุณเริ่มรู้สึกเหนื่อยจนอยากนอนกี่โมง","scored":true,"options":[["20.00–21.00 น.",5],["21.00–22.15 น.",4],["22.15–00.45 น.",3],["00.45–02.00 น.",2],["02.00–03.00 น.",1]]},{"type":"single","id":"RMEQ5","q":"คุณคิดว่าตัวเองเป็นคนแบบไหน","scored":true,"options":[["คนตื่นเช้าชัดเจน",6],["ค่อนไปทางคนตื่นเช้า",4],["ค่อนไปทางคนกลางคืน",2],["คนกลางคืนชัดเจน",0]]},{"type":"sleep","id":"SW","ids":["SW_ON","SW_WAKE"],"q":"ในวันทำงาน ปกติคุณเริ่มหลับและตื่นกี่โมง","defOn":"00:30","defWake":"08:00"},{"type":"sleep","id":"SF","ids":["SF_ON","SF_WAKE"],"q":"ในวันหยุดที่ไม่ต้องตั้งปลุก ปกติคุณเริ่มหลับและตื่นกี่โมง","defOn":"01:30","defWake":"10:00"},{"type":"emoji","id":"FEEL_NT","q":"ช่วงค่ำของวันนั้นคุณรู้สึกยังไง"}]},{"id":"bonus","name":"ด่านโบนัส: ใช่ฉันไหม","sky":"midnight","items":[{"type":"deck","id":"H","q":"ประโยคไหนเป็นคุณ","hint":"ปัดขวา = ใช่เลย · ปัดซ้าย = ไม่ใช่","labels":["ไม่ใช่","บางที","ใช่เลย"],"cards":[["H1","วันทำงาน ฉันนั่งหน้าจอต่อเนื่องนานจนลืมลุก"],["H2","บางวันฉันแทบไม่ได้ออกไปข้างนอกเลย"],["H3","ฉันอยากขยับร่างกายมากขึ้น แต่ไม่มีช่วงเวลาที่แน่นอนในแต่ละวัน"],["H4","กิจกรรมสั้น ๆ 10–20 นาที ฉันน่าจะทำได้จริงกว่ากิจกรรมยาว ๆ"],["H5","อากาศร้อน ฝน หรือฝุ่น ทำให้ฉันไม่ออกไปทำกิจกรรมข้างนอก"],["H6","ถ้ามีเพื่อนหรือกลุ่มนัดเวลาประจำ ฉันจะทำกิจกรรมได้ต่อเนื่องกว่า"],["H7","สิ่งของหรืออุปกรณ์บางอย่าง ช่วยให้ฉันสลับจากการทำงานไปพักหรือไปทำกิจกรรมได้ง่ายขึ้น"],["H8","ฉันไม่ค่อยเชื่อข้อมูลสุขภาพที่มากับการขายของ แต่เชื่อความรู้ที่บอกแหล่งอ้างอิง"],["H9","ฉันมักเห็นสินค้าในโซเชียลก่อน แล้วค่อยไปดูของจริงที่ร้านหรือเทียบราคาออนไลน์"]]},{"type":"rank","id":"PAIN","ids":["PAIN_1","PAIN_2","PAIN_3"],"other":"PAIN_other","q":"เลือก 3 เรื่องที่ตรงกับวันของคุณที่สุด","hint":"แตะเรียงจากมากไปน้อย","options":["ไม่มีเวลาเลิกงานที่ชัดเจน งานมักลากยาว","ช่วงค่ำคือเวลาที่ทำงานได้ดีที่สุด","ตอนเช้า กว่าจะตื่นตัวพร้อมทำงานต้องใช้เวลานาน","กินข้าวไม่เป็นเวลา กินตอนที่ว่าง","นั่งนานและไม่ค่อยได้ออกไปข้างนอก","อยากขยับร่างกาย แต่ไม่มีช่วงเวลาที่แน่นอนในแต่ละวัน","อยากมีตัวช่วยแบ่งเวลางานกับเวลาพักให้ชัด","ไม่ไว้ใจข้อมูลสุขภาพที่มากับการขายของ","อื่น ๆ"]}]},{"id":"psy","name":"แบบไหนคือคุณ","sky":"midnight","items":[{"type":"pairs","id":"V","q":"แบบไหนคือคุณ","hint":"แตะฝั่งที่ใช่ หรือ “ทั้งสองแบบ”","pairs":[["V1","วันของฉัน…","วางแผนล่วงหน้า","ปล่อยไปตามงาน"],["V2","เวลาทำกิจกรรม ฉันชอบ…","ทำคนเดียว","ทำกับกลุ่ม"],["V3","เวลาซื้อของ ฉัน…","ซื้อน้อยชิ้นแต่ใช้นาน","ชอบลองของใหม่บ่อย"],["V4","ฉันเลือกของจาก…","ดีไซน์และความรู้สึก","ฟังก์ชันและความคุ้มค่า"],["V5","การพักที่ดีสำหรับฉันคือ…","ได้อยู่เงียบ ๆ","ได้ออกไปข้างนอก"],["V6","เวลาขยับร่างกาย ฉัน…","ชอบตั้งเป้าแล้ววัดผล","ทำเพราะรู้สึกดี"],["V7","เรื่องสุขภาพ ฉัน…","ดูแลก่อนมีอาการ","ค่อยดูแลเมื่อมีอาการ"],["V8","สำหรับฉัน งาน…","เป็นส่วนหนึ่งของตัวตน","เป็นแค่งาน แยกจากชีวิตส่วนตัว"]]},{"type":"multi","id":"A2","q":"คอนเทนต์ที่คุณติดตามบ่อย","hint":"เลือกได้สูงสุด 3 ข้อ","max":3,"other":"A2_other","exclusive":"ไม่ได้ติดตามเป็นประจำ","options":["ดีไซน์และศิลปะ","เทคโนโลยีและ AI","อาหาร","ท่องเที่ยว","สุขภาพและการออกกำลังกาย","การเงินและการลงทุน","แฟชั่น","ดนตรี","เกม","พัฒนาตัวเองและการจัดการเวลา","แคมปิ้งและกิจกรรมกลางแจ้ง","หนัง ซีรีส์ และอนิเมะ","ข่าวและสังคม","ความงามและการดูแลตัวเอง","อื่น ๆ","ไม่ได้ติดตามเป็นประจำ"]},{"type":"multi","id":"A3","q":"ถ้าจะขยับร่างกายมากขึ้น เหตุผลหลักของคุณคืออะไร","hint":"เลือกได้สูงสุด 3 ข้อ","max":3,"options":["สุขภาพระยะยาว","อารมณ์ดีขึ้น","ได้ไอเดียงาน","ได้เจอคน","รูปร่างดีขึ้น","มีแรงทำงาน","นอนหลับดีขึ้น","ยังไม่มีเหตุผลที่ชัด"]}]},{"id":"invite","name":"ถ้าพรุ่งนี้มีใครชวน","sky":"predawn","items":[{"type":"single","id":"B1","q":"ถ้าจะเริ่มขยับร่างกายมากขึ้น คุณอยากทำแบบไหน","options":["กลุ่มเล็กที่นัดเวลาประจำ","ทำคนเดียว แต่มีบันทึกให้เห็นความคืบหน้า","กับเพื่อนสนิท 1–2 คน","ผ่านแอปหรือคลาสออนไลน์","ยังไม่สนใจตอนนี้"]},{"type":"deck","id":"B2","q":"ไอเดียไหนที่คุณอยากลอง","hint":"ปัดขวา = อยากลอง · ปัดซ้าย = ไม่สนใจ","labels":["ไม่สนใจ","เฉย ๆ","อยากลอง"],"cards":[["B2_1","เดินรับแสงเช้า 10 นาที ก่อนเปิดจอ"],["B2_2","ปั่นจักรยานเช้าวันหยุดกับกลุ่ม"],["B2_3","เดิน 10 นาทีหลังมื้อเที่ยง"],["B2_4","ลุกเดินสั้น ๆ หลังจบประชุม"],["B2_5","วิ่งเบาหรือเดินในสวนหลังเลิกงาน กับกลุ่มเล็ก"],["B2_6","แบดมินตันหรือกีฬาแร็กเก็ตหลังเลิกงาน"],["B2_7","โยคะหรือยืดเหยียดในร่มช่วงเย็น"],["B2_8","ยืดเหยียด 5 นาทีก่อนนอน"]]},{"type":"multi","id":"B5","q":"ปกติคุณรู้จักสินค้าใหม่จากที่ไหน","hint":"เลือกได้สูงสุด 3 ข้อ","max":3,"other":"B5_other","options":["Instagram","TikTok","YouTube","Facebook","X หรือ Threads","Pinterest หรือ Lemon8","LINE","เว็บหรือคลิปรีวิว","เพื่อนแนะนำ","ร้านในห้าง","แพลตฟอร์มซื้อขายออนไลน์","อื่น ๆ"]},{"type":"multi","id":"B6","q":"ปกติคุณซื้อของใช้หรืออุปกรณ์กิจกรรมที่ไหน","hint":"เลือกได้สูงสุด 3 ข้อ","max":3,"exclusive":"แทบไม่ได้ซื้อ","options":["ร้านของแบรนด์ในห้าง","ห้างหรือซูเปอร์มาร์เก็ตทั่วไป","ร้านกีฬาหรือร้านเฉพาะทาง","Shopee หรือ Lazada","เว็บไซต์ของแบรนด์","ร้านมือสองหรือกลุ่มซื้อขาย","แทบไม่ได้ซื้อ"]},{"type":"multi","id":"B7","q":"คุณเชื่อความรู้สุขภาพจากแหล่งไหน","hint":"เลือกได้สูงสุด 3 ข้อ","max":3,"exclusive":"ไม่ค่อยเชื่อแหล่งไหน","options":["แพทย์หรือผู้เชี่ยวชาญ","บทความที่บอกแหล่งอ้างอิง","ครีเอเตอร์สายสุขภาพ","เพื่อนหรือคนรู้จัก","แบรนด์สินค้า","แอปสุขภาพ","ไม่ค่อยเชื่อแหล่งไหน"]}]},{"id":"end","name":"จบวัน","sky":"dawn","items":[{"type":"single","id":"I1","q":"ถ้ามีเวลาว่างเพิ่มวันละ 30 นาที คุณจะใช้ทำอะไร","other":"I1_other","options":["นอนหรือพัก","ขยับร่างกายหรือออกไปข้างนอก","ทำงานส่วนตัวหรือโปรเจกต์ของตัวเอง","อยู่กับครอบครัวหรือเพื่อน","งานอดิเรก","เรียนรู้สิ่งใหม่","อื่น ๆ"]},{"type":"single","id":"P8","q":"เพศของคุณ","note":"ข้อมูลเพิ่มเติม ข้ามได้ทุกข้อ","optional":true,"options":["หญิง","ชาย","นอนไบนารีหรืออื่น ๆ","ไม่ขอตอบ"]},{"type":"single","id":"P9","q":"ตอนนี้คุณอยู่กับใคร","optional":true,"options":["อยู่คนเดียว","คู่ชีวิต","ครอบครัว","เพื่อนหรือรูมเมต","ไม่ขอตอบ"]},{"type":"single","id":"P10","q":"คุณต้องดูแลเด็กเล็กหรือผู้สูงอายุที่บ้านไหม","optional":true,"options":["ใช่","ไม่ใช่","ไม่ขอตอบ"]},{"type":"single","id":"P11","q":"รายได้ต่อเดือนจากงานทั้งหมดของคุณอยู่ในช่วงไหน","optional":true,"options":["น้อยกว่า 15,000 บาท","15,000–30,000 บาท","30,001–50,000 บาท","50,001–80,000 บาท","80,001–120,000 บาท","มากกว่า 120,000 บาท","ไม่ขอตอบ"]},{"type":"text","id":"O1","q":"ช่วงไหนของวันที่คุณอยากมีใครชวนออกไปขยับร่างกาย และอยากให้ชวนแบบไหน","optional":true},{"type":"text","id":"FEEDBACK","q":"มีข้อไหนที่ไม่มีคำตอบตรงกับคุณ หรืออยากบอกอะไรเพิ่มเติมไหม","optional":true},{"type":"submit","id":"SUBMIT"}]}]};
+const SRC = (new URLSearchParams(location.search).get("src")||"direct").replace(/[^\w\-]/g,"").slice(0,40)||"direct";
+const APP_URL = "https://piyanon11.github.io/creator-day/";
+window.API_URL = "https://script.google.com/macros/s/AKfycbyNFNtb00_ka-_UDnbLiIfjATX9GEi-s3r-0TFHcPbgPo3ZQPwXX9ReD-Bm1fmpgaEa/exec";
+
+/* =================================================================== */
+/* PIXEL ENGINE                                                        */
+/* =================================================================== */
+const PAL = { k:'#2A2240', w:'#FFFFFF', g:'#C9C6D6', G:'#7A7590', r:'#E8505B', R:'#B23A48', o:'#FF9F43', O:'#D97A22',
+  y:'#FFCF4A', Y:'#E0A526', n:'#3DBE7A', N:'#2A8A57', b:'#4C7BF0', B:'#2C4FB8', c:'#7FD8F2', C:'#3FA9D0',
+  p:'#FF8FB1', P:'#D9658A', u:'#8B6CE0', U:'#5E44B0', t:'#A87650', T:'#6E4A30', s:'#F2C29B', S:'#D9A07A', e:'#F4EEDC', E:'#D8CCAA', m:'#3A3550' };
+function blit(ctx, grid, ox, oy, s, pal){ pal = pal || PAL; s = s || 1;
+  for (let y=0;y<grid.length;y++){ const row=grid[y]; for (let x=0;x<row.length;x++){ const ch=row[x]; if (ch==='.'||ch===' ') continue; ctx.fillStyle=pal[ch]||ch; ctx.fillRect((ox+x)*s,(oy+y)*s,s,s); } } }
+function makeGrid(w,h,fn){ const g=Array.from({length:h},()=>Array(w).fill('.')); const set=(x,y,c)=>{ if(x>=0&&y>=0&&x<w&&y<h) g[y][x]=c; };
+  const rect=(x,y,ww,hh,c)=>{ for(let j=0;j<hh;j++) for(let i=0;i<ww;i++) set(x+i,y+j,c); }; fn(set,rect); return g.map(r=>r.join('')); }
+
+/* ---------- ไอคอนกิจกรรม 12×12 ---------- */
+const ICONS = {
+  shoe:['............','............','............','....kkkk....','...kwwwrk...','...kwwwrrk..','..kwwwrrrrk.','.kwwwwrrrrrk','.krrrrrrrrrk','.kwwwwwwwwwk','..kkkkkkkkk.','............'],
+  dumbbell:['............','............','.kk......kk.','kGGk....kGGk','kggk....kggk','kggkkkkkkggk','kggGGGGGGggk','kggkkkkkkggk','kggk....kggk','kGGk....kGGk','.kk......kk.','............'],
+  mat:['............','............','............','...kkkkkkkk.','..kpppUppppk','.kpkkpUppppk','.kpkPpUppppk','.kpPpkUppppk','..kpppUppppk','...kkkkkkkk.','............','............'],
+  bike: makeGrid(12,12,(s,r)=>{ const ring=(cx,cy)=>{ [[-1,-2],[0,-2],[1,-2],[-2,-1],[2,-1],[-2,0],[2,0],[-2,1],[2,1],[-1,2],[0,2],[1,2]].forEach(([dx,dy])=>s(cx+dx,cy+dy,'k')); s(cx,cy,'G'); };
+    ring(2,8); ring(9,8); [[2,8],[3,7],[4,6],[5,6],[6,6],[7,6],[8,7],[9,8],[4,7],[5,8],[6,8],[6,7],[3,5],[4,5],[8,5],[8,4],[9,3],[10,3]].forEach(([x,y])=>s(x,y,'b')); s(2,4,'k'); s(3,4,'k'); s(4,4,'k'); s(10,2,'k'); }),
+  goggles:['............','............','............','............','.kkkk..kkkk.','kcwcck.kcwck','kccckkkkccck','kcccck.kccck','.kkkk..kkkk.','............','............','............'],
+  ball:['............','....kkkk....','..kkwwwwkk..','.kwwkkwwwwk.','.kwkkkwwkwk.','kwwwkwwkkkwk','kwwwwwwwkwwk','kkwwwkwwwwwk','.kkwkkkwwkk.','.kwwwkwwwwk.','..kkwwwwkk..','....kkkk....'],
+  racket:['............','...kkkk.....','..kgwgwk....','.kwgwgwgk...','.kgwgwgwk...','.kwgwgwgk...','..kgwgwk....','...kkkkk....','.....kTk..k.','......kTkkyk','.......kTkyk','........k.k.'],
+  rope:['............','.....kk.....','....kGGk....','...kGgGGk...','...kGGrGk...','..kGgGGGGk..','..kGGGbGGk..','.kGyGGGgGGk.','.kGGGGGGrGk.','kGgGGnGGGGGk','kkkkkkkkkkkk','............'],
+  note:['............','.......kkkk.','.......kuuk.','.......kkuk.','.......k.uk.','.......k.uk.','....kkkk.uk.','...kuuuk.uk.','...kuuuk.k..','....kkk.....','............','............'],
+  glove:['............','...kkkkkk...','..krrrrrrk..','.krrwrrrrrk.','.krrrrrrrrk.','kkrrrrrrrrk.','krkrrrrrrrk.','krrkrrrrrrk.','.krrrrrrrk..','..kwwwwwk...','..kkkkkkk...','............'],
+  tent:['............','.....k......','....kok.....','...kooOk....','...kooOOk...','..kooOkOOk..','..koOkkkOOk.','.kooOkkkkOOk','.kooOkkkkOOk','kkkkkkkkkkkk','.NNNNNNNNNN.','............'],
+  phone:['............','...kkkkkk...','..kmmmmmmk..','..kcccccck..','..kcbcccck..','..kccccbck..','..kcccccck..','..kcbbcbck..','..kcccccck..','..kmmggmmk..','...kkkkkk...','............'],
+  pad:['............','............','............','..kkkkkkkk..','.kuuuuuuuuk.','kuukuuuuyuuk','kukkkuuyuyuk','kuukuuuuyuuk','kuuuukkuuuuk','.kuuk..kuuk.','..kk....kk..','............'],
+  dice:['............','............','...kkkkkkk..','..kwwwwwwk..','.kwwwwwwkk..','.kkkkkkkwk..','.kwwkwwkwk..','.kwwwwwkwk..','.kwkwwkkk...','.kwwwwwk....','.kkkkkkk....','............'],
+  popcorn:['............','...k.kk.k...','..kwkwwkwk..','.kwwywwywwk.','.kywwywwwyk.','.kkkkkkkkkk.','.kwrwwrwwrk.','..kwrwwrwk..','..kwrwwrwk..','..kwrwwrwk..','...kkkkkk...','............'],
+  ticket:['............','............','............','.kkkkkkkkkk.','.kyyykyyyyyk','kyyyykyrryyk','.kyyyyyrryyk','.kyyykyyyyyk','kyyyyk.yyyyk','.kkkkkkkkkk.','............','............'],
+  mic:['............','....kkkk....','...kgGgGk...','...kGgGgk...','...kgGgGk...','....kkkk....','.....kk.....','.....km.....','.....km.....','.....km.....','....kkkk....','............'],
+  headphones:['............','...kkkkkk...','..kmmmmmmk..','.kmk....kmk.','.km......mk.','.km......mk.','kkkk....kkkk','kcbk....kbck','kcbk....kbck','kcbk....kbck','kkkk....kkkk','............'],
+  brush:['............','.........kk.','........kRk.','.......kRk..','......kTk...','.....kTk....','....kGk.....','...kGk......','..krrk......','.krrrk......','.krrk.......','..kk........'],
+  camera:['............','............','...kkk......','..kmmmkkkkk.','.kmmmmmmmmk.','.kmmkkkkmmk.','.kmkcccwkmk.','.kmkcbbckmk.','.kmkccbckmk.','.kmmkkkkmmk.','..kkkkkkkk..','............'],
+  guitar:['.........kk.','........kTk.','.......kTk..','......kTk...','...kkkTk....','..kooOTk....','.koookkOk...','.kooOkkook..','..kooOOook..','..kooookk...','...kkkk.....','............'],
+  yarn:['............','....kkkk....','..kkppppkk..','.kpPppPppk..','.kppPppPpk..','kpPppPppPpk.','kppPppPppPk.','.kpPppPppk..','.kppPppPpkkk','..kkppppk..k','....kkkk...k','............'],
+  pan:['............','............','...kkkkk....','..kmmmmmk...','.kmyyywmmk..','.kmyywwymkkk','.kmywyyymkTT','.kmmyyymmkkk','..kmmmmmk...','...kkkkk....','............','............'],
+  plant:['............','.....kk.....','....knnk.kk.','..kkknNk.knk','.knnkNk.knNk','.kNnnkk.kNk.','..kkkNkkkk..','...kkkkkk...','...kooook...','...koOOok...','....koook...','....kkkk....'],
+  cup:['............','....k..k....','.....k..k...','....k..k....','..kkkkkkkk..','..kwwwwwwkkk','..ktTTTTtk.k','..kwwwwwwk.k','..kwwwwwwkkk','...kwwwwk...','.kkkkkkkkkk.','............'],
+  frame:['............','.kkkkkkkkkk.','.kyyyyyyyyk.','.kykkkkkkyk.','.kykccccyk..','.kykcckckyk.','.kykcnkNkyk.','.kyknNNnkyk.','.kykkkkkkyk.','.kyyyyyyyyk.','.kkkkkkkkkk.','............'],
+  shopbag:['............','....kkkk....','...k....k...','...k....k...','.kkkkkkkkkk.','.kppppppppk.','.kppppppppk.','.kppkkkpppk.','.kppkppppk..','.kpppkkpppk.','.kkkkkkkkkk.','............'],
+  suitcase:['............','....kkkk....','....k..k....','.kkkkkkkkkk.','.kbbbbbbbbk.','.kbbyybbbbk.','.kkkkkkkkkk.','.kbbbbbbybk.','.kbbbbbbbbk.','.kkkkkkkkkk.','..kk....kk..','............'],
+  glass:['............','.kkkkkkkkkk.','.kwccccccwk.','..kccccrck..','...kccrck...','....kcck....','.....kk.....','.....kk.....','.....kk.....','.....kk.....','...kkkkkk...','............'],
+  heart:['............','............','..kkk..kkk..','.krrrkkrwrk.','krrrrrrrwrrk','krrrrrrrrrrk','krrrrrrrrrrk','.krrrrrrrrk.','..krrrrrrk..','...krrrrk...','....krrk....','.....kk.....'],
+  leaf:['............','........kkk.','......kknnk.','....kknnnnk.','...knnnnNnk.','..knnnnNnnk.','..knnnNnnk..','..knnNnnk...','..knNnkk....','..kNkk......','.kNk........','.kk.........'],
+  steam:['............','...k..k..k..','..k..k..k...','...k..k..k..','..k..k..k...','............','.kkkkkkkkkk.','.kttttttttk.','.kTTTTTTTTk.','.kttttttttk.','.kkkkkkkkkk.','............'],
+  candle:['.....kk.....','....kyyk....','....kyok....','.....kk.....','....kkkk....','....keek....','....keEk....','....keEk....','....keEk....','..kkkkkkkk..','..kyyyyyyk..','...kkkkkk...'],
+  book:['............','............','.kkkkk.kkkkk','krrrrrkbbbbk','krwwwrkbwwbk','krrrrrkbbbbk','krwwrrkbwbbk','krrrrrkbbbbk','krrrrrkbbbbk','kkkkkkkkkkkk','.kwwwwkwwwk.','..kkkk.kkk..'],
+  pencil:['............','.........kk.','........kpPk','.......kyyk.','......kyyk..','.....kyyk...','....kyyk....','...kyyk.....','..keek......','..kEk.......','..kk........','............'],
+  pillow:['............','............','.kk......kk.','.kwkkkkkkwk.','.kwwwwwwwwk.','.kwcwwwwwwk.','.kwwwwwwcwk.','.kwwwwwwwwk.','.kwkkkkkkwk.','.kk......kk.','............','............'],
+  bulb:['............','....kkkk....','...kyyyyk...','..kyywyyyk..','..kywyyyyk..','..kyyyyyyk..','...kyyyyk...','....kyyk....','....kGGk....','....kggk....','.....kk.....','............'],
+  laptop:['............','..kkkkkkkk..','..kccccccck.','..kcbbcccck.','..kcccbbcck.','..kccccccck.','..kkkkkkkkk.','.kgggggggggk','kgggggggggggk'.slice(0,12),'kkkkkkkkkkkk','............','............'],
+  speech:['............','.kkkkkkkkk..','kwwwwwwwwwk.','kwbbwwbbwwk.','kwwwwwwwwwk.','kwbbbwbbbwk.','kwwwwwwwwwk.','.kkkwwkkkk..','...kwk......','...kk.......','.......kkk..','............'],
+  clock:['............','...kkkkkk...','..kwwwwwwk..','.kwwwkwwwwk.','.kwwwkwwwwk.','.kwwwkwwwwk.','.kwwwkkkwwk.','.kwwwwwwwwk.','.kwwwwwwwwk.','..kwwwwwwk..','...kkkkkk...','............'],
+  star:['............','.....kk.....','.....kyk....','....kyyk....','kkkkkyyykkkk','.kyyyyyyyyk.','..kyyyyyyk..','..kyyyyyyk..','.kyyykkyyyk.','.kyk....kyk.','.kk......kk.','............'],
+  bag:['............','....kkkk....','...k....k...','..kkkkkkkk..','.kttttttttk.','ktTTkyykTTtk','kttttkkttttk','kttttttttttk','kttttttttttk','kTTTTTTTTTTk','.kkkkkkkkkk.','............'],
+  /* หน้าแสดงความรู้สึก */
+  'f-2':['...kkkkkk...','..kyyyyyyk..','.kyyyyyyyyk.','kyykyyyykyyk','kycyyyyyyyyk','kcyyyyyyyyyk','kyyykkkkyyyk','kyykyyyykyyk','.kyyyyyyyyk.','..kyyyyyyk..','...kkkkkk...','............'],
+  'f-1':['...kkkkkk...','..kyyyyyyk..','.kyyyyyyyyk.','kyykyyyykyyk','kyyyyyyyyyyk','kyyyyyyyyyyk','kyyyyyyyyyyk','kyyykkkkyyyk','.kykyyyykyk.','..kyyyyyyk..','...kkkkkk...','............'],
+  'f0':['...kkkkkk...','..kyyyyyyk..','.kyyyyyyyyk.','kyykyyyykyyk','kyyyyyyyyyyk','kyyyyyyyyyyk','kyyyyyyyyyyk','kyyykkkkyyyk','.kyyyyyyyyk.','..kyyyyyyk..','...kkkkkk...','............'],
+  'f1':['...kkkkkk...','..kyyyyyyk..','.kyyyyyyyyk.','kyykyyyykyyk','kyyyyyyyyyyk','kpyyyyyyyypk','kyykyyyykyyk','kyyykkkkyyyk','.kyyyyyyyyk.','..kyyyyyyk..','...kkkkkk...','............'],
+  'f2':['...kkkkkk...','..kyyyyyyk..','.kyyyyyyyyk.','kyykyyyykyyk','kyyyyyyyyyyk','kpykkkkkkypk','kyykwwwwkyyk','kyyykrrkyyyk','.kyyykkyyyk.','..kyyyyyyk..','...kkkkkk...','............']
+};
+function iconCanvas(name, cls){ const c=document.createElement('canvas'); c.width=12; c.height=12; c.className='px'+(cls?' '+cls:''); blit(c.getContext('2d'), ICONS[name]||ICONS.star, 0, 0, 1); return c; }
+
+/* ---------- ตัวละคร (ประกอบจากชิ้นส่วน + เส้นขอบอัตโนมัติ) ---------- */
+/* กริดตัวละคร 40×46: ตัวละครกว้างราว 20 สูง 35 วางที่ (4,8) เผื่อที่ให้ไอเทมยื่นออกนอกตัว */
+const CK='#2A2240';
+const SKINS=[['#FCDCC4','#EEBC9C'],['#F1BE96','#DC9F76'],['#D19366','#B3744B'],['#8F5C40','#714431']];
+const HAIRC=[['#3A2C3E','#5E4A63','#261B2B'],['#7A4A30','#A36C4A','#56311F'],['#E9B44C','#F8D888','#BF8A2E'],['#F07FA8','#FFB3CD','#C9557F'],['#E0693A','#F69B6B','#AF4A22'],['#9C86E0','#C7B8F6','#6E58B8']];
+const HAIRS=['short','bob','long','curly','bun','pony'];
+const OUTFIT = {
+  base:  { shirt:'#FF9F43', shirtD:'#DB7C26', pants:'#4A6FB5', pantsD:'#36528A', shoe:'#FFFFFF', shoeD:'#C9C6D6' },
+  move:  { shirt:'#EF5A63', shirtD:'#C23F4C', pants:'#2F3F7A', pantsD:'#222E5C', shoe:'#FFFFFF', shoeD:'#EF5A63', shorts:true, acc:'band', accC:'#FFD45E', stripe:'#FFFFFF' },
+  play:  { shirt:'#8B6CE0', shirtD:'#6449BC', pants:'#3A3550', pantsD:'#2A263C', shoe:'#F4EEDC', shoeD:'#8B6CE0', hood:true, acc:'phones' },
+  create:{ shirt:'#F4EEDC', shirtD:'#D9CDAE', pants:'#6E4A30', pantsD:'#553722', shoe:'#3A3550', shoeD:'#5E4650', apron:'#E9A93B', acc:'beret', accC:'#C2414F' },
+  out:   { shirt:'#2BA59B', shirtD:'#1E7D75', pants:'#4A6FB5', pantsD:'#36528A', shoe:'#FFFFFF', shoeD:'#2BA59B', inner:'#FFFFFF', acc:'cap', accC:'#FFD45E', accD:'#E0A526' },
+  rest:  { shirt:'#8DB580', shirtD:'#6C9561', pants:'#E6D7B8', pantsD:'#CDBB97', shoe:'#FF9DBC', shoeD:'#D9658A', inner:'#F7F0DC', buttons:true, acc:'beanie', accC:'#F3A6BE', accD:'#D97C9C' },
+  learn: { shirt:'#9CCBFF', shirtD:'#6EA6E6', pants:'#2F3F7A', pantsD:'#222E5C', shoe:'#6E4A30', shoeD:'#A87650', vest:'#3E4F8F', collar:'#FFFFFF', acc:'glasses' }
+};
+OUTFIT.other = OUTFIT.base; OUTFIT.none = OUTFIT.base;
+function Raster(w,h){ const a=new Array(w*h).fill(null);
+  const R={ w,h,a,
+    set(x,y,c){ if(x>=0&&y>=0&&x<w&&y<h) a[y*w+x]=c; },
+    rect(x,y,ww,hh,c){ for(let j=0;j<hh;j++) for(let i=0;i<ww;i++) R.set(x+i,y+j,c); },
+    rr(x,y,ww,hh,c){ R.rect(x+1,y,ww-2,hh,c); R.rect(x,y+1,ww,hh-2,c); },
+    outline(c){ const b=a.slice(); const f=(x,y)=>x>=0&&y>=0&&x<w&&y<h&&b[y*w+x];
+      for(let y=0;y<h;y++) for(let x=0;x<w;x++){ if(b[y*w+x]) continue; if(f(x-1,y)||f(x+1,y)||f(x,y-1)||f(x,y+1)) a[y*w+x]=c; } },
+    draw(ctx,s,ox,oy){ s=s||1; ox=ox||0; oy=oy||0; for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const c=a[y*w+x]; if(c){ ctx.fillStyle=c; ctx.fillRect((ox+x)*s,(oy+y)*s,s,s); } } } };
+  return R; }
+/* o: {outfit, pose:'down'|'up'|'wave'|'hug', step, prop, sk, hs, hc} */
+function drawChar(ctx, o, s, ox, oy){
+  s=s||1; ox=ox||0; oy=oy||0;
+  const f = OUTFIT[o.outfit] || OUTFIT.base;
+  const [skin, skinD] = SKINS[o.sk||0] || SKINS[0];
+  const [hair, hairH, hairD] = HAIRC[o.hc||0] || HAIRC[0];
+  const hs = HAIRS[o.hs||0] || 'short';
+  const pose = o.pose || 'down';
+  const L1=Raster(40,46), L2=Raster(40,46); const X=4, Y=8;
+  const r=(x,y,w,h,c,L)=>(L||L1).rect(x+X,y+Y,w,h,c), q=(x,y,w,h,c,L)=>(L||L1).rr(x+X,y+Y,w,h,c), p=(x,y,c,L)=>(L||L1).set(x+X,y+Y,c);
+  // ผมด้านหลัง / ฮู้ด
+  if (hs==='long') q(7,7,18,18,hair);
+  if (hs==='pony'){ q(23,8,4,4,hair); q(24,11,4,10,hair); r(25,12,1,7,hairH); r(23,10,2,1,'#FF8FB1'); }
+  if (f.hood) q(8,16,16,5,f.shirtD);
+  // แขนข้างลำตัว
+  const armDown=(x)=>{ r(x,20,2,4,f.shirt); r(x,24,2,2,skin); };
+  if (pose==='down'){ armDown(7); armDown(23); }
+  if (pose==='up' || pose==='wave'){ armDown(7); }
+  if (pose==='hug'){ r(7,20,2,3,f.shirt); r(23,20,2,3,f.shirt); }
+  // ขาและรองเท้า
+  const lift = o.step===1 ? 1 : 0;
+  if (f.shorts){ r(11,28,10,2,f.pants); r(11,30,4,3-lift,skin); r(17,30,4,3,skin); }
+  else { r(11,28,10,2,f.pants); r(11,30,4,3-lift,f.pants); r(17,30,4,3,f.pants); r(11,31-lift,4,1,f.pantsD); r(17,31,4,1,f.pantsD); }
+  r(10,33-lift,5,2,f.shoe); r(10,34-lift,5,1,f.shoeD); r(17,33,5,2,f.shoe); r(17,34,5,1,f.shoeD);
+  // ลำตัว
+  q(10,19,12,9,f.shirt); r(10,26,12,2,f.shirtD);
+  if (f.stripe){ r(10,22,12,1,f.stripe); r(15,23,2,2,f.stripe); }
+  if (f.inner){ r(13,20,6,8,f.inner); r(12,20,1,8,f.shirtD); r(19,20,1,8,f.shirtD); }
+  if (f.buttons){ p(12,22,f.inner); p(12,25,f.inner); }
+  if (f.apron){ r(11,21,10,7,f.apron); r(12,19,1,2,f.apron); r(19,19,1,2,f.apron); p(13,23,'#4C7BF0'); p(18,25,'#E8505B'); p(16,22,'#3DBE7A'); }
+  if (f.hood){ p(13,20,'#FFFFFF'); p(13,21,'#FFFFFF'); p(18,20,'#FFFFFF'); p(18,21,'#FFFFFF'); r(12,24,8,2,f.shirtD); }
+  if (f.vest){ r(11,22,10,5,f.vest); p(15,23,'#FFD45E'); p(16,23,'#FFD45E'); }
+  if (f.collar){ r(12,19,3,1,f.collar); r(17,19,3,1,f.collar); }
+  r(14,19,4,1,skinD);
+  // หัว
+  r(8,13,1,2,skin); r(23,13,1,2,skin);
+  q(9,7,14,12,skin); r(9,11,14,1,skinD);
+  // ผมด้านหน้า
+  const cap=()=>{ r(10,3,12,1,hair); r(9,4,14,1,hair); r(8,5,16,5,hair);
+    r(8,10,5,1,hair); r(14,10,2,1,hair); r(18,10,6,1,hair); p(9,11,hair); p(14,11,hair); p(21,11,hair); p(22,11,hair);
+    r(8,10,1,4,hair); r(23,10,1,4,hair); r(11,4,4,1,hairH); r(10,5,2,1,hairH); r(17,5,2,1,hairH); r(9,9,14,1,hairD); r(13,9,1,1,hair); };
+  if (hs==='short'||hs==='pony') cap();
+  if (hs==='bob'||hs==='long'){ cap(); q(7,7,3,12,hair); q(22,7,3,12,hair); p(7,18,null); p(24,18,null); r(8,16,2,2,hairD); r(22,16,2,2,hairD); p(8,8,hairH); }
+  if (hs==='curly'){ q(6,2,20,9,hair); [7,10,13,16,19,22,25].forEach(x=>p(x,2,null)); q(6,8,3,9,hair); q(23,8,3,9,hair); r(9,10,3,2,hair); r(13,10,2,1,hair); r(16,10,3,1,hair); r(20,10,3,2,hair); r(9,3,3,1,hairH); r(14,3,2,1,hairH); p(8,4,hairH); r(6,15,3,1,hairD); r(23,15,3,1,hairD); }
+  if (hs==='bun'){ q(12,-1,8,5,hair); r(14,0,2,1,hairH); r(12,3,8,1,hairD); cap(); }
+  // หน้า
+  r(11,12,2,2,CK); p(11,12,'#FFFFFF'); r(19,12,2,2,CK); p(19,12,'#FFFFFF');
+  r(10,15,2,1,'#F59CB0'); r(20,15,2,1,'#F59CB0'); r(15,16,2,1,'#A3445A');
+  // เครื่องประดับตามชุด
+  if (f.acc==='band'){ r(8,8,16,2,f.accC); r(8,9,16,1,'#E0A526'); }
+  if (f.acc==='phones'){ r(9,2,14,1,'#3A3550'); p(8,3,'#3A3550'); p(23,3,'#3A3550'); r(7,4,1,6,'#3A3550'); r(24,4,1,6,'#3A3550'); q(6,10,3,6,'#3A3550'); q(23,10,3,6,'#3A3550'); r(7,12,1,2,'#7FD8F2'); r(24,12,1,2,'#7FD8F2'); }
+  if (f.acc==='beret'){ q(6,2,18,5,f.accC); r(7,6,16,1,'#9E2F3C'); r(9,3,4,1,'#E0707C'); p(15,1,CK); }
+  if (f.acc==='cap'){ q(8,2,16,6,f.accC); r(10,3,4,1,'#FFF0B0'); r(7,7,18,2,f.accD); p(15,2,f.accD); }
+  if (f.acc==='beanie'){ q(8,2,16,7,f.accC); r(8,7,16,2,f.accD); [10,13,16,19,22].forEach(x=>r(x,3,1,4,f.accD)); q(13,-1,6,4,'#FFFFFF'); }
+  if (f.acc==='glasses'){ r(10,11,4,4,CK); r(18,11,4,4,CK); r(11,12,2,2,'#E3F4FF'); r(19,12,2,2,'#E3F4FF'); r(14,12,4,1,CK); p(12,13,CK); p(20,13,CK); }
+  L1.outline(CK);
+  // แขนที่ยกขึ้น / มือด้านหน้า
+  if (pose==='up' || pose==='wave'){ r(22,19,3,2,f.shirt,L2); r(24,13,2,7,f.shirt,L2); r(24,11,2,2,skin,L2); }
+  if (pose==='hug'){ r(8,22,2,3,skin,L2); r(22,22,2,3,skin,L2); }
+  L2.outline(CK);
+  const prop = o.prop ? (ICONS[o.prop]||ICONS.star) : null;
+  const P=(gx,gy)=>{ if(prop) blit(ctx, prop, ox+X+gx, oy+Y+gy, s); };
+  L1.draw(ctx,s,ox,oy);
+  if (pose==='hug'){ P(10,16); L2.draw(ctx,s,ox,oy); }
+  else { L2.draw(ctx,s,ox,oy); if(pose==='down') P(20,18); if(pose==='up') P(19,-2); if(pose==='wave') P(-1,18); }
+}
+function charCanvas(o, cls){ const c=document.createElement('canvas'); c.width=40; c.height=46; c.className='px'+(cls?' '+cls:''); drawChar(c.getContext('2d'), o, 1, 0, 0); return c; }
+
+/* ---------- เพื่อนร่วมทาง 16×14 ---------- */
+const BUDDY = {
+  lark:['........kkkk....','.......kyyyyk...','.......kyykyyk..','..kk...kyyyyyook','.kYYk.kyyyyyyk..','.kYYYkyyywwwyk..','..kYYyyywwwwyk..','...kYyyyywwwyk..','....kyyyyyyyk...','.....kkkkkkk....','.......o..o.....','......oo.oo.....','................','................'],
+  cat:['..k.........k...','.kok.......kok..','.kook.....kook..','.koookkkkkoook..','kooOooooooOoook.','kookoooooookook.','koooooppooooook.','.koooooooooook..','..kowwwwwwwok...','.koowwwwwwwook.k','.koowwwwwwwookok','.koowwwwwwwookok','.kowwkwwwkwwokk.','..kkkkkkkkkkk...'],
+  owl:['.kk.........kk..','.kuk.......kuk..','..kukkkkkkkuk...','.kuuuuuuuuuuuk..','kuwwwuuuuuwwwuk.','kuwkwuuuuuwkwuk.','kuwwwuuyuuwwwuk.','kuuuuuuyuuuuuuk.','kuUeeeeeeeeeUuk.','kuUeUeeUeeUeUuk.','kuUeeeeeeeeeUuk.','.kuUeUeeUeeUuk..','..kkyykkkyykk...','................']
+};
+
+/* ---------- ฉากท้องฟ้า ---------- */
+const SKY = {
+  predawn:{ bands:['#1E1B4B','#2E2A6B','#4B3F8F','#7A5BA8','#B07FB8','#E3A6C0'], moon:[.78,.22], stars:24, city:'#241F45', win:true },
+  dawn:   { bands:['#6C8CD5','#8FA8E3','#B9C3EC','#EBC8D8','#F7D0B8','#FBE2C4'], sun:[.2,.72,'#FFD25E'], clouds:2, city:'#7A6E9E' },
+  morning:{ bands:['#5FB7F2','#7DC6F5','#9DD5F7','#C2E5F7','#FFE9B0','#FFF3D1'], sun:[.25,.38,'#FFD25E'], clouds:3, city:'#6E87A8' },
+  noon:   { bands:['#3E9CE8','#55AAEE','#6FB9F2','#8CC8F5','#AED8F8','#D5EBFB'], sun:[.62,.16,'#FFE680'], clouds:4, city:'#5E7CA0' },
+  dusk:   { bands:['#3B2F78','#5E4590','#8E4F94','#C2608A','#EE8A6A','#FFB86B'], sun:[.76,.74,'#FF8A4C'], clouds:2, city:'#3A2A5E', win:true },
+  night:  { bands:['#0C1233','#121A45','#1A2558','#22306B','#2B3A7A','#34458A'], moon:[.7,.2], stars:34, city:'#0F1430', win:true },
+  midnight:{bands:['#050818','#090E28','#0E1538','#131C48','#192456','#1F2C63'], moon:[.28,.18], stars:50, city:'#080B1E', win:true }
+};
+function rng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function disc(ctx,cx,cy,r,c){ ctx.fillStyle=c; for(let y=-r;y<=r;y++){ const w=Math.floor(Math.sqrt(r*r-y*y)+.35); ctx.fillRect(cx-w,cy+y,w*2+1,1); } }
+/* วาดฉากความละเอียดต่ำ: groundY = แนวพื้น, opts.sun/moon แทนค่าเริ่มต้นได้ */
+function drawScene(ctx, W, H, key, groundY, opts){
+  opts=opts||{}; const sk=Object.assign({}, SKY[key]||SKY.noon, opts);
+  const R=rng(opts.seed||7);
+  const bands=sk.bands, bh=groundY/bands.length;
+  bands.forEach((c,i)=>{ ctx.fillStyle=c; ctx.fillRect(0,Math.floor(i*bh),W,Math.ceil(bh)+1); });
+  for(let i=1;i<bands.length;i++){ const y=Math.floor(i*bh); ctx.fillStyle=bands[i]; for(let x=(i%2);x<W;x+=2) ctx.fillRect(x,y-1,1,1); ctx.fillStyle=bands[i-1]; for(let x=((i+1)%2);x<W;x+=2) ctx.fillRect(x,y,1,1); }
+  if (sk.stars){ for(let i=0;i<sk.stars;i++){ const x=Math.floor(R()*W), y=Math.floor(R()*groundY*.7); ctx.fillStyle= R()<.25 ? '#FFE79A' : '#FFFFFF'; ctx.fillRect(x,y,1,1); if(R()<.15){ ctx.fillRect(x-1,y,3,1); ctx.fillRect(x,y-1,1,3); } } }
+  const unit=Math.max(1,Math.round(Math.min(W,groundY)/60));
+  if (sk.sun){ const [sx,sy,col]=sk.sun; const cx=Math.round(sx*W), cy=Math.round(sy*groundY), r=5*unit;
+    ctx.globalAlpha=.25; disc(ctx,cx,cy,r+2*unit,'#FFF6C8'); ctx.globalAlpha=1; disc(ctx,cx,cy,r,col); disc(ctx,cx-unit,cy-unit,Math.max(1,r-3*unit),'#FFF3B0'); }
+  if (sk.moon){ const [mx,my]=sk.moon; const cx=Math.round(mx*W), cy=Math.round(my*groundY), r=4*unit;
+    disc(ctx,cx,cy,r,'#F3F0FF'); disc(ctx,cx+Math.round(r*.55),cy-Math.round(r*.35),r-unit,bands[Math.min(bands.length-1,Math.floor(cy/bh))]); }
+  if (sk.clouds){ for(let i=0;i<sk.clouds;i++){ const cx=Math.floor(R()*W), cy=Math.floor((.12+R()*.4)*groundY), w=(10+Math.floor(R()*10))*unit;
+    ctx.fillStyle='#FFFFFF'; ctx.globalAlpha=.9; ctx.fillRect(cx,cy,w,2*unit); ctx.fillRect(cx+2*unit,cy-unit,w-5*unit,unit); ctx.fillRect(cx+4*unit,cy-2*unit,Math.max(unit,w-10*unit),unit); ctx.globalAlpha=1; } }
+  // เมือง
+  let x=-Math.floor(R()*4*unit);
+  while(x<W){ const bw=(5+Math.floor(R()*7))*unit, bhh=(6+Math.floor(R()*16))*unit; ctx.fillStyle=sk.city; ctx.fillRect(x,groundY-bhh,bw,bhh);
+    if (R()<.3){ ctx.fillRect(x+Math.floor(bw/2),groundY-bhh-2*unit,unit,2*unit); }
+    for(let wy=groundY-bhh+2*unit; wy<groundY-unit; wy+=3*unit) for(let wx=x+unit; wx<x+bw-unit; wx+=2*unit){ if(R()<(sk.win?.35:.18)){ ctx.fillStyle= sk.win ? (R()<.8?'#FFD866':'#FFB86B') : 'rgba(255,255,255,.35)'; ctx.fillRect(wx,wy,unit,unit); } }
+    x+=bw+Math.floor(R()*2)*unit; }
+  // พื้น
+  ctx.fillStyle = sk.win ? '#2A2442' : '#5E8F5A'; ctx.fillRect(0,groundY,W,H-groundY);
+  ctx.fillStyle = sk.win ? '#3A3358' : '#79AE6E'; ctx.fillRect(0,groundY,W,unit);
+  ctx.fillStyle = sk.win ? '#221D38' : '#4E7B4B'; for(let gx=0; gx<W; gx+=4*unit) ctx.fillRect(gx+((gx/4/unit)%2?2*unit:0),groundY+2*unit,unit,unit);
+}
+
+
+/* ตัวอย่างตัวละครสำหรับหน้าแรก (คละฉาก ชุด ท่า ทรงผม สีผิว) */
+const SAMPLES=[
+  {sky:'morning',outfit:'move',prop:'shoe',pose:'up',sk:0,hs:1,hc:4,seed:2},
+  {sky:'night',outfit:'play',prop:'pad',pose:'wave',sk:2,hs:3,hc:0,seed:5},
+  {sky:'noon',outfit:'create',prop:'brush',pose:'down',sk:1,hs:4,hc:3,seed:8},
+  {sky:'dusk',outfit:'out',prop:'suitcase',pose:'hug',sk:3,hs:0,hc:1,seed:3},
+  {sky:'dawn',outfit:'rest',prop:'book',pose:'down',sk:1,hs:2,hc:2,seed:6},
+  {sky:'midnight',outfit:'learn',prop:'laptop',pose:'up',sk:0,hs:5,hc:5,seed:9}
+];
+function sceneTile(m){ const c=document.createElement('canvas'); c.width=48; c.height=56; c.className='px'; const x=c.getContext('2d'); drawScene(x,48,56,m.sky,48,{seed:m.seed}); drawChar(x,m,1,4,6); return c; }
+
+/* =================================================================== */
+/* STATE                                                               */
+/* =================================================================== */
+const S = { answers:{}, consent:false, age18:false, tsStart:null, idx:0, hist:[], resultId:null, derived:null };
+const SCREENS = [];
+SURVEY.scenes.forEach((sc, si) => sc.items.forEach(it => SCREENS.push({ sc, si, it })));
+const NON = ['intro','consent','submit','avatar'];
+const NOCOUNT = ['intro','consent','submit'];
+const COUNTABLE = SCREENS.filter(s => !NOCOUNT.includes(s.it.type)).length;
+const STAGES = SURVEY.scenes.length - 1;
+const GROUPS = SURVEY.actGroups;
+const ACT_NONE = (SCREENS.find(s=>s.it.type==='bag')||{it:{}}).it.exclusive;
+const ACT_INFO = {}; GROUPS.forEach(g=>g.items.forEach(a=>{ ACT_INFO[a[0]]={group:g.id, icon:a[1], cls:g.cls}; }));
+const $ = (sel, el=document) => el.querySelector(sel);
+const h = (tag, attrs={}, ...kids) => { const e=document.createElement(tag); for (const k in attrs){ if(k==='class') e.className=attrs[k]; else if(k.startsWith('on')) e.addEventListener(k.slice(2),attrs[k]); else if(attrs[k]!==false && attrs[k]!=null) e.setAttribute(k,attrs[k]); } kids.flat().forEach(c=>{ if(c==null) return; e.append(c.nodeType?c:document.createTextNode(c)); }); return e; };
+const label = o => Array.isArray(o) ? o[0] : o;
+const isMobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+
+function save(){ try{ sessionStorage.setItem('odc2', JSON.stringify({a:S.answers,c:S.consent,g:S.age18,t:S.tsStart,i:S.idx,h:S.hist})); }catch(e){} }
+function load(){ try{ const d=JSON.parse(sessionStorage.getItem('odc2')||'null'); if(d && d.c){ S.answers=d.a||{}; S.consent=d.c; S.age18=d.g; S.tsStart=d.t; S.idx=d.i||0; S.hist=d.h||[]; } }catch(e){} }
+
+function visible(it){
+  const a=S.answers;
+  if (it.showIf) for (const k in it.showIf) if (a[k] !== it.showIf[k]) return false;
+  if (it.showIfNot) for (const k in it.showIfNot) if (a[k] === it.showIfNot[k] || a[k]===undefined) return false;
+  if (it.showIfGt) for (const k in it.showIfGt) if (!(+a[k] > it.showIfGt[k])) return false;
+  if (it.showIfHas && !a[it.showIfHas]) return false;
+  if (it.showIfCountGt) for (const k in it.showIfCountGt) if (!((Array.isArray(a[k]) ? a[k].filter(x=>x!==ACT_NONE).length : 0) > it.showIfCountGt[k])) return false;
+  return true;
+}
+function nextIdx(i){ do{ i++; } while(i < SCREENS.length && !visible(SCREENS[i].it)); return i; }
+function itemKeys(it){ return it.type==='deck' ? it.cards.map(c=>c[0]) : it.type==='pairs' ? it.pairs.map(p=>p[0]) : it.ids ? it.ids : [it.id]; }
+function actName(lab){ return lab==='อื่น ๆ' && S.answers.ACT_other ? 'อื่น ๆ: '+S.answers.ACT_other : lab; }
+function actIcon(lab){ return (ACT_INFO[lab]||{}).icon || 'star'; }
+
+/* ---------- ฉากพื้นหลัง + ตัวเดิน ---------- */
+let curSky='predawn';
+function paintBg(){
+  const c=document.getElementById('bg'); const W=Math.ceil(innerWidth/4), H=Math.ceil(innerHeight/4);
+  c.width=W; c.height=H; const ctx=c.getContext('2d');
+  const hud=document.getElementById('hud'); const scene=document.getElementById('scene');
+  let gy = hud.classList.contains('hidden') ? Math.round(H*.62) : Math.round((hud.offsetHeight+scene.offsetHeight-4)/4);
+  drawScene(ctx, W, H, curSky, gy, {seed: 11});
+}
+function setSky(key){ if (key!==curSky){ curSky=key; paintBg(); } }
+addEventListener('resize', paintBg);
+const WALKER = { outfit:'base', pose:'down', step:0 };
+function av(){ if(!S.answers._av){ S.answers._av={sk:Math.floor(Math.random()*4), hs:Math.floor(Math.random()*6), hc:Math.floor(Math.random()*6)}; } return S.answers._av; }
+let walkTimer=null;
+function drawWalker(step){ const c=document.getElementById('walker'); const x=c.getContext('2d'); x.clearRect(0,0,40,46); drawChar(x, Object.assign({}, WALKER, {step}), 1, 0, 0); }
+function walkTo(t, back){
+  const w=document.getElementById('walker'); w.classList.toggle('flip', !!back);
+  w.style.left = 'calc('+(4+t*78).toFixed(1)+'% )';
+  clearInterval(walkTimer); let n=0; walkTimer=setInterval(()=>{ drawWalker(n%2); n++; if(n>7){ clearInterval(walkTimer); drawWalker(0); w.classList.remove('flip'); } }, 95);
+}
+
+/* =================================================================== */
+/* RENDER                                                              */
+/* =================================================================== */
+let lastScene = -1;
+function go(i, fromBack){
+  if (!fromBack && S.idx !== i) S.hist.push(S.idx);
+  S.idx = i; save();
+  const scr = SCREENS[i];
+  const showHud = !['intro','consent'].includes(scr.it.type);
+  Object.assign(WALKER, av());
+  document.getElementById('hud').classList.toggle('hidden', !showHud);
+  document.getElementById('scene').classList.toggle('hidden', !showHud);
+  curSky=null; setSky(scr.sc.sky);
+  if (showHud){
+    const done = SCREENS.slice(0, i).filter(s=>!NOCOUNT.includes(s.it.type)).length;
+    const t = Math.min(1, done / COUNTABLE);
+    document.querySelector('#bar i').style.width = (t*100).toFixed(1)+'%';
+    document.getElementById('stage-tag').innerHTML='';
+    document.getElementById('stage-tag').append(h('span',{class:'vt'},'ด่าน '+scr.si+'/'+STAGES), scr.sc.name);
+    document.getElementById('back').hidden = S.hist.length===0;
+    walkTo(t, fromBack);
+  }
+  if (!fromBack && scr.si !== lastScene && lastScene !== -1 && scr.si > 1 && scr.it.type!=='submit') interstitial(scr);
+  lastScene = scr.si;
+  RENDER[scr.it.type](scr.it);
+  const sh=document.getElementById('sheet'); if (sh) sh.scrollTop=0;
+}
+const SCENE_ICON = { profile:'star', am:'f1', mid:'cup', pm:'shoe', bag:'bag', nt:'pillow', bonus:'star', psy:'heart', invite:'ticket', end:'star' };
+function interstitial(scr){
+  const el=document.getElementById('inter');
+  document.getElementById('inter-title').textContent=scr.sc.name;
+  document.getElementById('inter-sub').textContent='ด่าน '+scr.si+' / '+STAGES;
+  const frac=Math.min(.9,(scr.si-1)/STAGES);
+  drawUnlock(document.getElementById('inter-icon'), frac);
+  document.getElementById('inter-prog').textContent='ปลดล็อกตัวละครแล้ว '+Math.round(frac*100)+'%';
+  el.classList.add('show');
+  const hide=()=>el.classList.remove('show');
+  el.onclick=hide; setTimeout(hide, 1400);
+}
+/* เงาตัวละครที่ค่อย ๆ เติมสีจากเท้าขึ้นไปตามความคืบหน้า (ชุดและไอเทมจริงยังไม่เปิดเผย) */
+function drawUnlock(c, frac){
+  const x=c.getContext('2d'); x.clearRect(0,0,40,46);
+  const col=document.createElement('canvas'); col.width=40; col.height=46; drawChar(col.getContext('2d'), Object.assign({outfit:'base',pose:'down'}, av()), 1, 0, 0);
+  const sil=document.createElement('canvas'); sil.width=40; sil.height=46; const sx=sil.getContext('2d');
+  sx.drawImage(col,0,0); sx.globalCompositeOperation='source-in'; sx.fillStyle='#4B4470'; sx.fillRect(0,0,40,46);
+  x.drawImage(sil,0,0);
+  const top=8, bot=44, cut=Math.round(bot-(bot-top)*frac);
+  x.drawImage(col,0,cut,40,46-cut,0,cut,40,46-cut);
+  if (frac<.9){ x.fillStyle='#FFD866'; x.font='bold 9px monospace'; x.textAlign='center'; x.fillText('?',20,Math.max(14,cut-12)); }
+}
+document.getElementById('back').addEventListener('click', ()=>{
+  if (!S.hist.length) return;
+  let j=S.hist.pop(); while(S.hist.length && !visible(SCREENS[j].it)) j=S.hist.pop();
+  go(j, true);
+});
+function advance(){ const n=nextIdx(S.idx); if(n<SCREENS.length) go(n); }
+
+function frame(it, {hint, note}={}){
+  const stage=document.getElementById('stage'); stage.innerHTML='';
+  const qh=h('div',{id:'qh'}, note?h('span',{class:'note'},note):null, h('h1',{},it.q||''), hint?h('p',{},hint):null);
+  const content=h('div',{id:'content'});
+  const footer=h('div',{id:'footer'});
+  const sheet=h('div',{id:'sheet'}, qh, content, footer);
+  stage.append(sheet);
+  return {content, footer, sheet};
+}
+function nextBtn(footer, enabled, text='ต่อไป ▶'){
+  const b=h('button',{class:'btn',type:'button',onclick:advance},text); b.disabled=!enabled; footer.append(b); return b;
+}
+function pressGroup(container, sel, on){ container.querySelectorAll(sel).forEach(x=>x.setAttribute('aria-pressed', String(on(x)))); }
+
+const RENDER = {
+  intro(it){
+    const stage=document.getElementById('stage'); stage.innerHTML='';
+    const lineup=h('div',{class:'lineup'}, SAMPLES.map((m,i)=>{ const c=sceneTile(m); c.style.animationDelay=(i*0.18)+'s'; return h('div',{class:'lt pb'}, c); }));
+    stage.append(
+      h('div',{class:'intro'},
+        h('div',{class:'title pb'}, h('small',{},'A CREATOR\'S DAY'), h('h1',{},'หนึ่งวัน', h('br'), 'ของครีเอเตอร์')),
+        lineup,
+        h('p',{class:'teaser'},'มีตัวละครมากกว่า 100 แบบ เล่นจนจบแล้วดูว่าวันของคุณได้ตัวไหน'),
+        h('div',{class:'introtxt pb'},
+          h('p',{},'ย้อนเล่นวันทำงานล่าสุดของคุณทีละด่าน ตั้งแต่ตื่นจนเข้านอน เก็บกิจกรรมใส่กระเป๋า แล้วรับตัวละครไว้แชร์ตอนจบ ใช้เวลาประมาณ 10–12 นาที'),
+          h('p',{class:'small'},'แบบสอบถามนี้เป็นส่วนหนึ่งของวิทยานิพนธ์ เรื่องการออกแบบแบรนด์สินค้าไลฟ์สไตล์จากแนวคิดการทำงานของฮอร์โมนที่สอดคล้องกับพฤติกรรมในชีวิตประจำวันของกลุ่มสายอาชีพนักสร้างสรรค์'))
+      ),
+      h('div',{class:'introfoot'}, h('button',{class:'btn',type:'button',onclick:advance},'▶ เริ่มเกม'))
+    );
+  },
+  avatar(it){
+    const {content, footer}=frame(it,{hint:it.hint});
+    const a=av();
+    const prev=h('canvas',{class:'px avprev pb',width:'48',height:'56'});
+    const paint=()=>{ const x=prev.getContext('2d'); x.clearRect(0,0,48,56); drawScene(x,48,56,'dawn',48,{seed:4,clouds:1}); drawChar(x,Object.assign({outfit:'base',pose:'wave'},a),1,4,6); save(); sync(); };
+    const row=(title, n, make, key)=>{ const wrap=h('div',{class:'avrow'}); for(let i=0;i<n;i++){ const b=h('button',{class:'avopt',type:'button','data-k':key,'data-i':String(i),'aria-label':title+' '+(i+1)}, make(i)); b.addEventListener('click',()=>{ a[key]=i; paint(); }); wrap.append(b); } return h('div',{class:'fsec'}, h('div',{class:'flab'},title), wrap); };
+    const sw=(col)=>h('span',{class:'swatch',style:'background:'+col});
+    const sync=()=>content.querySelectorAll('.avopt').forEach(x=>x.setAttribute('aria-pressed', String(a[x.dataset.k]===+x.dataset.i)));
+    content.append(h('div',{class:'avtop'}, prev),
+      row('สีผิว', SKINS.length, i=>sw(SKINS[i][0]), 'sk'),
+      row('ทรงผม', HAIRS.length, i=>{ const c=document.createElement('canvas'); c.width=28; c.height=28; c.className='px'; drawChar(c.getContext('2d'),{outfit:'base',sk:a.sk,hs:i,hc:a.hc},1,-6,-6); return c; }, 'hs'),
+      row('สีผม', HAIRC.length, i=>sw(HAIRC[i][0]), 'hc'),
+      h('div',{class:'skipwrap'}, h('button',{class:'chip',type:'button',onclick:()=>{ a.sk=Math.floor(Math.random()*4); a.hs=Math.floor(Math.random()*6); a.hc=Math.floor(Math.random()*6); paint(); }},'สุ่มหน้าตา')));
+    paint();
+    // อัปเดตรูปทรงผมเมื่อเปลี่ยนสีผิวหรือสีผม
+    content.addEventListener('click',()=>{ content.querySelectorAll('.avopt[data-k=hs] canvas').forEach((c,i)=>{ const x=c.getContext('2d'); x.clearRect(0,0,28,28); drawChar(x,{outfit:'base',sk:a.sk,hs:i,hc:a.hc},1,-6,-6); }); Object.assign(WALKER,a); drawWalker(0); });
+    nextBtn(footer,true,'ใช้หน้าตานี้ ▶');
+  },
+  consent(it){
+    const {content, footer}=frame({q:'ก่อนเริ่ม ขออนุญาตเล่าให้ฟังสั้น ๆ'});
+    content.append(h('div',{class:'consent'},
+      h('p',{},'แบบสอบถามนี้เป็นส่วนหนึ่งของวิทยานิพนธ์ระดับมหาบัณฑิต เรื่องการออกแบบแบรนด์สินค้าไลฟ์สไตล์จากแนวคิดการทำงานของฮอร์โมนที่สอดคล้องกับพฤติกรรมในชีวิตประจำวันของกลุ่มสายอาชีพนักสร้างสรรค์'),
+      h('p',{},'ใช้เวลาประมาณ 10–12 นาที ไม่เก็บชื่อ และไม่ถามข้อมูลสุขภาพหรือโรคประจำตัว คำถามเรื่องเพศ ผู้ที่อยู่ด้วย และรายได้ อยู่ท้ายเกมและข้ามได้ทุกข้อ คำตอบจะถูกวิเคราะห์เป็นภาพรวมเท่านั้น คุณหยุดเล่นได้ทุกเมื่อ คำตอบที่ยังไม่กดส่งจะไม่ถูกบันทึก'),
+      h('p',{},'ข้อมูลเก็บในบัญชี Google ของผู้วิจัย ไม่เปิดเผยต่อบุคคลอื่น และจะลบเมื่อวิทยานิพนธ์เสร็จสิ้น ช่องทางติดต่อที่คุณกรอกเพื่อสมัครสัมภาษณ์หรือรับสรุปผล จะเก็บแยกจากคำตอบและลบเมื่อใช้งานเสร็จ หากมีคำถามเกี่ยวกับงานวิจัย ติดต่อผู้วิจัยได้ตามข้อมูลด้านล่าง')
+    ),
+    h('div',{class:'researcher pb'}, h('b',{},'ผู้วิจัย'), h('p',{},'ปิยะนนท์ รอดแสน'), h('p',{},'นักศึกษาปริญญาโท หลักสูตรศิลปกรรมศาสตรมหาบัณฑิต'), h('p',{},'สาขาวิชานฤมิตศิลป์'), h('p',{},'คณะศิลปกรรมศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย'), h('p',{},'อีเมล ', h('a',{href:'mailto:6880018135@student.chula.ac.th'},'6880018135@student.chula.ac.th'))));
+    const btn = h('button',{class:'btn',type:'button'},'ยินยอมและเริ่มเล่น ▶');
+    const upd=()=>{ btn.disabled=!(c1.checked && c2.checked); };
+    const c1=h('input',{type:'checkbox',onchange:upd}), c2=h('input',{type:'checkbox',onchange:upd});
+    c1.checked=S.consent; c2.checked=S.age18;
+    content.append(h('label',{class:'check pb'},c1,h('span',{},'ฉันเข้าใจข้อมูลข้างต้น และยินยอมเข้าร่วม')),
+                   h('label',{class:'check pb'},c2,h('span',{},'ฉันอายุ 18 ปีขึ้นไป')));
+    btn.addEventListener('click',()=>{ S.consent=true; S.age18=true; if(!S.tsStart) S.tsStart=new Date().toISOString(); advance(); });
+    upd(); footer.append(btn);
+  },
+  single(it){
+    const {content, footer}=frame(it,{note:it.note, hint:it.hint});
+    const cur=S.answers[it.id];
+    let otherBox=null;
+    const nb = nextBtn(footer, cur!==undefined || it.optional, cur===undefined && it.optional ? 'ข้าม ▶' : 'ต่อไป ▶');
+    it.options.forEach(o=>{
+      const lab=label(o);
+      const b=h('button',{class:'opt single pb',type:'button','aria-pressed':String(cur===lab)}, h('span',{class:'mk'}), h('span',{},lab));
+      b.addEventListener('click',()=>{
+        S.answers[it.id]=lab; save();
+        pressGroup(content,'.opt',x=>x===b);
+        nb.disabled=false; nb.textContent='ต่อไป ▶';
+        if (it.other && lab==='อื่น ๆ'){ otherBox.classList.remove('hidden'); otherBox.focus(); return; }
+        if (otherBox) otherBox.classList.add('hidden');
+        setTimeout(advance, 260);
+      });
+      content.append(b);
+    });
+    if (it.other){
+      otherBox=h('input',{class:'other'+(cur==='อื่น ๆ'?'':' hidden'),type:'text',maxlength:'80',placeholder:'ระบุ'});
+      otherBox.value=S.answers[it.other]||'';
+      otherBox.addEventListener('input',()=>{ S.answers[it.other]=otherBox.value; save(); });
+      content.append(otherBox);
+    }
+  },
+  multi(it){
+    const {content, footer}=frame(it,{hint:it.hint});
+    let cur = Array.isArray(S.answers[it.id]) ? S.answers[it.id].slice() : [];
+    const msg=h('p',{class:'hintline'});
+    const nb=nextBtn(footer, cur.length>0);
+    let otherBox=null;
+    const sync=()=>{ S.answers[it.id]=cur.slice(); save(); nb.disabled=cur.length===0; pressGroup(content,'.opt,.chip',x=>cur.includes(x.dataset.v)); if(otherBox) otherBox.classList.toggle('hidden',!cur.includes('อื่น ๆ')); };
+    if (it.groups){
+      const chip=(lab)=>{ const b=h('button',{class:'chip',type:'button','data-v':lab},lab); b.addEventListener('click',()=>{ const r=toggleMulti(cur, lab, it); msg.textContent=r.msg||''; cur=r.cur; sync(); if(lab==='อื่น ๆ' && cur.includes(lab)) otherBox.focus(); }); return b; };
+      it.groups.forEach(g=>content.append(h('div',{class:'bgrp'}, h('div',{class:'flab'},g[0]), h('div',{class:'chips'}, g[1].map(chip)))));
+      const grouped=[].concat(...it.groups.map(g=>g[1]));
+      content.append(h('div',{class:'bgrp'}, h('div',{class:'chips'}, it.options.filter(o=>!grouped.includes(o)).map(chip))));
+      if (it.other){ otherBox=h('input',{class:'other hidden',type:'text',maxlength:'120',placeholder:'แบรนด์อื่น ๆ (พิมพ์คั่นด้วยจุลภาค)'}); otherBox.value=S.answers[it.other]||''; otherBox.addEventListener('input',()=>{ S.answers[it.other]=otherBox.value; save(); }); content.append(otherBox); }
+      content.append(msg); sync(); return;
+    }
+    it.options.forEach(o=>{
+      const lab=label(o);
+      const b=h('button',{class:'opt multi pb',type:'button','data-v':lab,'aria-pressed':String(cur.includes(lab))}, h('span',{class:'mk'}), h('span',{},lab));
+      b.addEventListener('click',()=>{ const r=toggleMulti(cur, lab, it); msg.textContent=r.msg||''; msg.classList.toggle('limit', !!r.msg); cur=r.cur; sync(); });
+      content.append(b);
+    });
+    if (it.other){ otherBox=h('input',{class:'other hidden',type:'text',maxlength:'120',placeholder:'ระบุ'}); otherBox.value=S.answers[it.other]||''; otherBox.addEventListener('input',()=>{ S.answers[it.other]=otherBox.value; save(); }); content.append(otherBox); }
+    content.append(msg); sync();
+  },
+  time(it){
+    const {content, footer}=frame(it,{hint:it.hint});
+    const lo=toMin(it.min), hi=toMin(it.max);
+    let v = S.answers[it.id];
+    let skipped = v===it.skip;
+    let m = (!v || skipped) ? toMin(it.def) : toMin(v); if (m < lo) m += 1440;
+    const big=h('b'), sub=h('small');
+    const rng=h('input',{type:'range',min:lo,max:hi,step:15,'aria-label':it.q});
+    const draw=()=>{ big.textContent=fmt(m).replace(':','.'); sub.textContent = m>=1440 ? 'หลังเที่ยงคืน' : ''; rng.value=m; };
+    const set=(x)=>{ m=Math.max(lo,Math.min(hi,x)); skipped=false; S.answers[it.id]=fmt(m); save(); draw(); if(skipChip) skipChip.setAttribute('aria-pressed','false'); lcd.style.opacity=1; };
+    rng.addEventListener('input',()=>set(+rng.value));
+    const lcd=h('div',{class:'lcd pb'},big,h('span',{},'น.'),sub);
+    content.append(lcd, h('div',{class:'tr'},
+      h('button',{class:'pb',type:'button','aria-label':'ลด 15 นาที',onclick:()=>set(m-15)},'−'), rng,
+      h('button',{class:'pb',type:'button','aria-label':'เพิ่ม 15 นาที',onclick:()=>set(m+15)},'+')));
+    let skipChip=null;
+    if (it.skip){
+      skipChip=h('button',{class:'chip',type:'button','aria-pressed':String(skipped)},it.skip);
+      skipChip.addEventListener('click',()=>{ skipped=!skipped; S.answers[it.id]= skipped ? it.skip : fmt(m); save(); skipChip.setAttribute('aria-pressed',String(skipped)); lcd.style.opacity= skipped ? .4 : 1; });
+      content.append(h('div',{class:'skipwrap'},skipChip));
+      if (skipped) lcd.style.opacity=.4;
+    }
+    if (!S.answers[it.id]) { S.answers[it.id]=fmt(m); save(); }
+    draw(); nextBtn(footer,true);
+  },
+  sleep(it){
+    const {content, footer}=frame(it,{hint:'เลื่อนให้ใกล้เคียงที่สุด ไม่ต้องตรงเป๊ะ'});
+    const [kOn,kW]=it.ids;
+    let on = toMin(S.answers[kOn]||it.defOn); if(on<720) on+=1440;
+    let wk = toMin(S.answers[kW]||it.defWake);
+    const row=(lab, val, lo, hi, cb)=>{
+      const b=h('b'); const r=h('input',{type:'range',min:lo,max:hi,step:15,'aria-label':lab});
+      const draw=()=>{ b.textContent=fmt(val).replace(':','.')+' น.'; r.value=val; };
+      const set=(x)=>{ val=Math.max(lo,Math.min(hi,x)); cb(val); draw(); sum(); };
+      r.addEventListener('input',()=>set(+r.value));
+      draw();
+      return h('div',{class:'sleeprow pb'}, h('div',{class:'lab'},lab), b, h('div',{class:'tr',style:'margin:8px 3px 10px'},
+        h('button',{class:'pb',type:'button','aria-label':'ลด 15 นาที',onclick:()=>set(val-15)},'−'), r,
+        h('button',{class:'pb',type:'button','aria-label':'เพิ่ม 15 นาที',onclick:()=>set(val+15)},'+')));
+    };
+    const s=h('p',{class:'sleepsum'});
+    const sum=()=>{ let d=wk-(on-1440); while(d<=0) d+=1440; s.textContent='นอนประมาณ '+(Math.round(d/60*2)/2)+' ชั่วโมง'; S.answers[kOn]=fmt(on); S.answers[kW]=fmt(wk); save(); };
+    content.append(row('เริ่มหลับ', on, 1080, 1800, v=>on=v), row('ตื่น', wk, 180, 840, v=>wk=v), s);
+    sum(); nextBtn(footer,true);
+  },
+  emoji(it){
+    const {content, footer}=frame(it);
+    const labs=['แย่มาก','แย่','เฉย ๆ','ดี','ดีมาก'];
+    const cur=S.answers[it.id];
+    const wrap=h('div',{class:'faces'});
+    labs.forEach((l,i)=>{
+      const v=i-2;
+      const b=h('button',{class:'face pb',type:'button','aria-pressed':String(String(cur)===String(v)),'aria-label':l}, iconCanvas('f'+v), h('span',{},l));
+      b.addEventListener('click',()=>{ S.answers[it.id]=v; save(); pressGroup(wrap,'.face',x=>x===b); setTimeout(advance,280); });
+      wrap.append(b);
+    });
+    content.append(wrap); nextBtn(footer, cur!==undefined);
+  },
+  number(it){
+    const {content, footer}=frame(it,{hint:it.hint});
+    const cur=S.answers[it.id];
+    const wrap=h('div',{class:'nums'});
+    for(let n=it.min;n<=it.max;n++){
+      const b=h('button',{class:'num pb',type:'button','aria-pressed':String(String(cur)===String(n))},String(n));
+      b.addEventListener('click',()=>{ S.answers[it.id]=n; save(); pressGroup(wrap,'.num',x=>x===b); setTimeout(advance,260); });
+      wrap.append(b);
+    }
+    content.append(h('p',{class:'hintline'},'จำนวนวัน'), wrap); nextBtn(footer, cur!==undefined);
+  },
+  deck(it){
+    const {content, footer}=frame(it,{hint:it.hint});
+    let i = it.cards.findIndex(c=>S.answers[c[0]]===undefined); if(i<0) i=0;
+    const deck=h('div',{class:'deck'});
+    const btns=h('div',{class:'dbtns'});
+    const nb=nextBtn(footer, it.cards.every(c=>S.answers[c[0]]!==undefined));
+    let busy=false;
+    const draw=()=>{
+      deck.innerHTML='';
+      if (i < it.cards.length-1) deck.append(h('div',{class:'card under pb'}, ''));
+      const c=h('div',{class:'card pb'}, h('span',{class:'cnt'}, (i+1)+'/'+it.cards.length), it.cards[i][1]);
+      deck.append(c); swipe(c);
+    };
+    const pick=(v, dir)=>{
+      if (busy) return; busy=true;
+      S.answers[it.cards[i][0]]=v; save();
+      const top=deck.lastChild;
+      top.style.transform = dir ? 'translateX('+(dir*120)+'%) rotate('+(dir*8)+'deg)' : 'translateY(-30px)';
+      top.style.opacity=0;
+      setTimeout(()=>{ busy=false; if (i < it.cards.length-1){ i++; draw(); } else { nb.disabled=false; advance(); } }, 300);
+    };
+    const swipe=(el)=>{
+      let x0=null, dx=0;
+      el.addEventListener('pointerdown',e=>{ x0=e.clientX; el.setPointerCapture(e.pointerId); el.style.transition='none'; });
+      el.addEventListener('pointermove',e=>{ if(x0===null) return; dx=e.clientX-x0; el.style.transform='translateX('+dx+'px) rotate('+(dx/24)+'deg)'; });
+      el.addEventListener('pointerup',()=>{ el.style.transition=''; if (Math.abs(dx)>80) pick(dx>0?2:0, dx>0?1:-1); else el.style.transform=''; x0=null; dx=0; });
+    };
+    btns.append(
+      h('button',{class:'pb',type:'button',onclick:()=>pick(0,-1)},'◀ '+it.labels[0]),
+      h('button',{class:'pb',type:'button',onclick:()=>pick(1,0)},it.labels[1]),
+      h('button',{class:'pb yes',type:'button',onclick:()=>pick(2,1)},it.labels[2]+' ▶'));
+    content.append(deck, btns); draw();
+  },
+  pairs(it){
+    const {content, footer}=frame(it,{hint:it.hint});
+    let i = it.pairs.findIndex(p=>S.answers[p[0]]===undefined); if(i<0) i=0;
+    const nb=nextBtn(footer, it.pairs.every(p=>S.answers[p[0]]!==undefined));
+    const box=h('div');
+    const draw=()=>{
+      const p=it.pairs[i];
+      const choose=v=>{ S.answers[p[0]]=v; save(); if(i<it.pairs.length-1){ i++; draw(); } else { nb.disabled=false; advance(); } };
+      box.innerHTML='';
+      box.append(h('p',{class:'pairq'},p[1]),
+        h('div',{class:'pair'}, h('button',{class:'side pb',type:'button',onclick:()=>choose('L')},p[2]), h('button',{class:'side pb',type:'button',onclick:()=>choose('R')},p[3])),
+        h('div',{class:'bothwrap'}, h('button',{class:'chip',type:'button',onclick:()=>choose('B')},'ทั้งสองแบบ')),
+        h('div',{class:'dots'}, it.pairs.map((_,k)=>h('i',{class:k<=i?'on':''}))));
+    };
+    content.append(box); draw();
+  },
+  rank(it){
+    const {content, footer}=frame(it,{hint:it.hint});
+    let order = it.ids.map(k=>S.answers[k]).filter(Boolean);
+    const nb=nextBtn(footer, order.length===3);
+    let sync=()=>{ it.ids.forEach((k,n)=>{ if(order[n]) S.answers[k]=order[n]; else delete S.answers[k]; }); save(); nb.disabled=order.length!==3;
+      content.querySelectorAll('.opt').forEach(x=>{ const n=order.indexOf(x.dataset.v); x.setAttribute('aria-pressed',String(n>=0)); x.querySelector('.rk').textContent = n>=0 ? n+1 : ''; }); };
+    let otherBox=null;
+    it.options.forEach(o=>{
+      const b=h('button',{class:'opt pb',type:'button','data-v':o}, h('span',{class:'rk'}), h('span',{},o));
+      b.addEventListener('click',()=>{ if(order.includes(o)) order=order.filter(x=>x!==o); else if(order.length<3) order.push(o); sync(); if(o==='อื่น ๆ' && order.includes(o)) otherBox.focus(); });
+      content.append(b);
+    });
+    if (it.other){ otherBox=h('input',{class:'other hidden',type:'text',maxlength:'120',placeholder:'เรื่องอื่น ๆ (ระบุ)'}); otherBox.value=S.answers[it.other]||''; otherBox.addEventListener('input',()=>{ S.answers[it.other]=otherBox.value; save(); }); content.append(otherBox);
+      const s0=sync; sync=()=>{ s0(); otherBox.classList.toggle('hidden', !order.includes('อื่น ๆ')); }; }
+    sync();
+  },
+  text(it){
+    const {content, footer}=frame(it);
+    const ta=h('textarea',{maxlength:'500',placeholder:'พิมพ์สั้น ๆ ก็พอ'});
+    ta.value=S.answers[it.id]||'';
+    const nb=nextBtn(footer,true, ta.value ? 'ต่อไป ▶' : 'ข้าม ▶');
+    ta.addEventListener('input',()=>{ S.answers[it.id]=ta.value; save(); nb.textContent= ta.value ? 'ต่อไป ▶' : 'ข้าม ▶'; });
+    content.append(ta);
+  },
+  /* ---------- กระเป๋ากิจกรรม ---------- */
+  bag(it){
+    const {content, footer}=frame(it,{hint:it.hint});
+    let cur = Array.isArray(S.answers[it.id]) ? S.answers[it.id].slice() : [];
+    const countBox=h('div',{class:'bagcount'}, iconCanvas('bag'), h('span',{}));
+    const nb=nextBtn(footer, cur.length>0);
+    footer.prepend(countBox);
+    let otherBox;
+    const sync=(popEl)=>{
+      S.answers[it.id]=cur.slice(); syncTop(); save();
+      nb.disabled = cur.length===0 || (cur.includes('อื่น ๆ') && !(S.answers[it.other]||'').trim());
+      const n=cur.filter(x=>x!==it.exclusive).length;
+      countBox.lastChild.textContent = cur.includes(it.exclusive) ? 'กระเป๋าว่าง' : 'ในกระเป๋า '+n+' ชิ้น';
+      pressGroup(content,'.tile,.chip',x=>cur.includes(x.dataset.v));
+      otherBox.classList.toggle('hidden', !cur.includes('อื่น ๆ'));
+      if (popEl){ popEl.classList.remove('pop'); void popEl.offsetWidth; popEl.classList.add('pop'); }
+    };
+    const tile=(lab, icon)=>{ const b=h('button',{class:'tile',type:'button','data-v':lab,'aria-pressed':'false'}, iconCanvas(icon), h('span',{},lab));
+      b.addEventListener('click',()=>{ const was=cur.includes(lab); cur = was ? cur.filter(x=>x!==lab) : cur.filter(x=>x!==it.exclusive).concat([lab]); sync(was?null:b); if(lab==='อื่น ๆ' && !was) otherBox.focus(); });
+      return b; };
+    GROUPS.forEach(g=>{
+      content.append(h('div',{class:'grp'}, h('div',{class:'grph'}, iconCanvas(g.items[0][1]), g.name), h('div',{class:'tiles'}, g.items.map(a=>tile(a[0],a[1])))));
+    });
+    content.append(h('div',{class:'grp'}, h('div',{class:'tiles'}, tile('อื่น ๆ','star'))));
+    otherBox=h('input',{class:'other hidden',type:'text',maxlength:'80',placeholder:'กิจกรรมอื่น ๆ ที่ทำ (ระบุ)'});
+    otherBox.value=S.answers[it.other]||'';
+    otherBox.addEventListener('input',()=>{ S.answers[it.other]=otherBox.value; save(); sync(); });
+    const none=h('button',{class:'chip',type:'button','data-v':it.exclusive},it.exclusive);
+    none.addEventListener('click',()=>{ cur = cur.includes(it.exclusive) ? [] : [it.exclusive]; sync(); });
+    content.append(otherBox, h('div',{class:'nonewrap'}, none));
+    sync();
+  },
+  pick(it){
+    const {content, footer}=frame(it,{hint:it.hint});
+    const pool=(S.answers[it.from]||[]).filter(x=>x!==ACT_NONE);
+    let order = it.ids.map(k=>S.answers[k]).filter(x=>x && pool.includes(x));
+    const nb=nextBtn(footer, order.length===3);
+    const grid=h('div',{class:'tiles'});
+    const sync=()=>{ it.ids.forEach((k,n)=>{ if(order[n]) S.answers[k]=order[n]; else delete S.answers[k]; }); save(); nb.disabled=order.length!==3;
+      grid.querySelectorAll('.tile').forEach(x=>{ const n=order.indexOf(x.dataset.v); x.setAttribute('aria-pressed',String(n>=0)); const bd=x.querySelector('.badge'); bd.textContent=n>=0?n+1:''; bd.classList.toggle('hidden',n<0); }); };
+    pool.forEach(lab=>{
+      const b=h('button',{class:'tile',type:'button','data-v':lab,style:'position:relative'}, h('span',{class:'badge hidden'}), iconCanvas(actIcon(lab)), h('span',{},actName(lab)));
+      b.addEventListener('click',()=>{ S.answers._topManual=true; if(order.includes(lab)) order=order.filter(x=>x!==lab); else if(order.length<3){ order.push(lab); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); } sync(); });
+      grid.append(b);
+    });
+    content.append(grid); sync();
+  },
+  actdetail(it){
+    const lab=S.answers[it.ref];
+    if (S.answers[it.id+'_FOR'] !== lab){ it.ids.forEach(k=>delete S.answers[k]); S.answers[it.id+'_FOR']=lab; save(); }
+    const {content, footer}=frame({q:'เล่ารายละเอียดกิจกรรมนี้'},{hint:'แตะตอบให้ครบทุกข้อ'});
+    const icon=actIcon(lab);
+    content.append(h('div',{class:'ahead pb'}, iconCanvas(icon), h('div',{}, h('small',{},'กิจกรรมที่ '+it.k+' จาก '+[1,2,3].filter(k=>S.answers['ACT_TOP'+k]).length), h('b',{},actName(lab)))));
+    const nb=nextBtn(footer,false);
+    const secs=[];
+    const upd=()=>{ const left=it.fields.filter(f=>{ const v=S.answers[f.id]; return v===undefined || (Array.isArray(v)&&!v.length); }).length;
+      nb.disabled=left>0; nb.textContent = left>0 ? 'ตอบอีก '+left+' ข้อ' : 'ต่อไป ▶'; save(); };
+    const scrollNext=(i)=>{ const nx=secs[i+1]; if(nx) setTimeout(()=>nx.scrollIntoView({behavior:'smooth',block:'center'}),120); };
+    it.fields.forEach((f,fi)=>{
+      const sec=h('div',{class:'fsec'}, h('div',{class:'flab'}, f.q, f.hint?h('span',{},f.hint):null));
+      secs.push(sec);
+      if (f.type==='slots'){
+        const SL=[['morning','light'],['noon','light'],['dusk','dark'],['night','dark'],['midnight','dark']];
+        let cur=Array.isArray(S.answers[f.id])?S.answers[f.id].slice():[];
+        const wrap=h('div',{class:'slots'});
+        f.options.forEach((o,oi)=>{ const sky=SKY[SL[oi][0]];
+          const b=h('button',{class:'slot '+SL[oi][1],type:'button','data-v':o,'aria-pressed':String(cur.includes(o)),style:'--bgc:linear-gradient(180deg,'+sky.bands[1]+','+sky.bands[4]+')'}, h('b',{},o), iconCanvas(icon), h('small',{},f.hints[oi]));
+          b.addEventListener('click',()=>{ cur = cur.includes(o) ? cur.filter(x=>x!==o) : cur.concat([o]); cur.sort((a,b2)=>f.options.indexOf(a)-f.options.indexOf(b2)); S.answers[f.id]=cur.slice(); pressGroup(wrap,'.slot',x=>cur.includes(x.dataset.v)); upd(); });
+          wrap.append(b); });
+        sec.append(wrap);
+      } else {
+        const chips=h('div',{class:'chips'}); const msg=h('p',{class:'hintline limit'});
+        let cur = f.type==='multi' ? (Array.isArray(S.answers[f.id])?S.answers[f.id].slice():[]) : S.answers[f.id];
+        f.options.forEach(o=>{ const b=h('button',{class:'chip',type:'button','data-v':o},o);
+          b.addEventListener('click',()=>{
+            if (f.type==='single'){ const first=cur===undefined; cur=o; S.answers[f.id]=o; pressGroup(chips,'.chip',x=>x.dataset.v===cur); upd(); if(first) scrollNext(fi); }
+            else { const r=toggleMulti(cur,o,f); msg.textContent=r.msg||''; cur=r.cur; S.answers[f.id]=cur.slice(); pressGroup(chips,'.chip',x=>cur.includes(x.dataset.v)); upd(); }
+          });
+          chips.append(b); });
+        pressGroup(chips,'.chip',x=> f.type==='multi' ? cur.includes(x.dataset.v) : x.dataset.v===cur);
+        sec.append(chips, msg);
+      }
+      content.append(sec);
+    });
+    upd();
+  },
+  submit(it){
+    const {content, footer}=frame({q:'จบวันแล้ว!'},{hint:'กดส่งคำตอบเพื่อปลดล็อกตัวละครของคุณ'});
+    const msg=h('p',{class:'hintline'});
+    const b=h('button',{class:'btn',type:'button'},'ส่งคำตอบและรับตัวละคร ▶');
+    content.append(h('div',{style:'text-align:center;margin:6px 0 14px'}, (()=>{ const c=charCanvas(Object.assign({outfit:'base',pose:'hug',prop:'star'},av())); c.style.width='120px'; c.style.height='138px'; return c; })()),
+      h('p',{class:'consent'},'คุณย้อนกลับไปแก้คำตอบได้ก่อนส่ง เมื่อส่งแล้วจะแก้ไม่ได้'), msg);
+    b.addEventListener('click',()=>{
+      b.disabled=true; b.textContent='กำลังบันทึก…'; msg.textContent='';
+      const payload={ consent:S.consent, age18:S.age18, tsStart:S.tsStart, src:SRC, device:isMobile?'mobile':'desktop', answers:cleanAnswers() };
+      runServer('submitResponse', payload, res=>{ S.resultId=res.id; S.derived=derive(payload.answers); S.derived.av=av(); try{ sessionStorage.removeItem('odc2'); }catch(e){} showResult(); },
+        err=>{ b.disabled=false; b.textContent='ลองส่งอีกครั้ง'; msg.textContent='ส่งไม่สำเร็จ: '+(err && err.message || err)+' ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วกดส่งอีกครั้ง'; msg.className='err'; });
+    });
+    footer.append(b);
+  }
+};
+
+function toggleMulti(cur, lab, it){
+  cur=cur.slice();
+  if (cur.includes(lab)) return {cur: cur.filter(x=>x!==lab)};
+  if (it.exclusive && lab===it.exclusive) return {cur:[lab]};
+  cur=cur.filter(x=>x!==it.exclusive);
+  if (it.max && cur.length>=it.max) return {cur, msg:'เลือกได้สูงสุด '+it.max+' ข้อ แตะข้อที่เลือกไว้เพื่อเอาออกก่อน'};
+  cur.push(lab); return {cur};
+}
+/* ถ้าเก็บกิจกรรมไว้ไม่เกิน 3 อย่าง ใส่เป็นอันดับให้อัตโนมัติ (ข้ามหน้าเลือก) */
+function syncTop(){
+  const acts=(S.answers.ACT||[]).filter(x=>x!==ACT_NONE);
+  const ids=['ACT_TOP1','ACT_TOP2','ACT_TOP3'];
+  if (acts.length<=3) ids.forEach((k,i)=>{ if(acts[i]) S.answers[k]=acts[i]; else delete S.answers[k]; });
+  else { const keep = S.answers._topManual ? ids.map(k=>S.answers[k]).filter(x=>x && acts.includes(x)) : []; ids.forEach((k,i)=>{ if(keep[i]) S.answers[k]=keep[i]; else delete S.answers[k]; }); }
+  if (acts.length<=3) S.answers._topManual=false;
+}
+function cleanAnswers(){
+  const out={};
+  SCREENS.forEach(s=>{
+    const it=s.it; if(NON.includes(it.type) || !visible(it)) return;
+    itemKeys(it).forEach(k=>{ if(S.answers[k]!==undefined) out[k]=S.answers[k]; });
+    if (it.other && S.answers[it.other]){ const vals=[S.answers[it.id]].concat(itemKeys(it).map(k=>S.answers[k])); if (vals.some(v=> v==='อื่น ๆ' || (Array.isArray(v) && v.includes('อื่น ๆ')))) out[it.other]=S.answers[it.other]; }
+  });
+  return out;
+}
+
+/* ---------- helpers ---------- */
+function toMin(t){ const m=/^(\d{1,2}):(\d{2})$/.exec(String(t||'')); return m ? (+m[1])*60+(+m[2]) : null; }
+function fmt(min){ min=((Math.round(min)%1440)+1440)%1440; return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0'); }
+function postApi(fn, body){
+  return fetch(window.API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({fn:fn},body))})
+    .then(r=>r.json()).then(j=>{ if(!j.ok) throw new Error(j.error||'error'); return j.result; });
+}
+function runServer(fn, arg, ok, fail){
+  if (window.google && google.script && google.script.run) google.script.run.withSuccessHandler(ok).withFailureHandler(fail)[fn](arg);
+  else if (window.API_URL) postApi(fn,{payload:arg}).then(ok,fail);
+  else if (window.MOCK_SERVER) MOCK_SERVER(fn, arg, ok, fail);
+  else fail(new Error('ไม่พบเซิร์ฟเวอร์'));
+}
+function runServer3(fn, a, b, c, ok, fail){
+  if (window.google && google.script && google.script.run) google.script.run.withSuccessHandler(ok).withFailureHandler(fail)[fn](a,b,c);
+  else if (window.API_URL) postApi(fn,{args:[a,b,c]}).then(ok,fail);
+  else if (window.MOCK_SERVER) MOCK_SERVER(fn, [a,b,c], ok, fail);
+  else fail(new Error('ไม่พบเซิร์ฟเวอร์'));
+}
+
+/* ---------- ค่าคำนวณสำหรับตัวละคร (ตรงกับ Code.gs) ---------- */
+function midSleep(on,wake){ let a=toMin(on), b=toMin(wake); if(a===null||b===null) return null; if(a<720) a+=1440; while(b<=a) b+=1440; return (a+(b-a)/2)%1440; }
+function derive(a){
+  const d={};
+  const sc={}; SURVEY.scenes.forEach(s=>s.items.forEach(it=>{ if(it.scored) it.options.forEach(o=>{ if(a[it.id]===o[0]) sc[it.id]=o[1]; }); }));
+  const ks=['RMEQ1','RMEQ2','RMEQ3','RMEQ4','RMEQ5'];
+  if (ks.every(k=>sc[k]!==undefined)){ d.rmeq=ks.reduce((s,k)=>s+sc[k],0); d.chrono=d.rmeq<=11?'evening':d.rmeq<=17?'neither':'morning'; }
+  const w=midSleep(a.SW_ON,a.SW_WAKE), f=midSleep(a.SF_ON,a.SF_WAKE);
+  if (w!==null && f!==null){ let x=Math.abs(f-w); if(x>720) x=1440-x; d.sjl=Math.round(x/60*100)/100; }
+  d.card = (d.chrono && d.sjl!==undefined) ? {morning:1,neither:3,evening:5}[d.chrono]+(d.sjl>=1?1:0) : 3;
+  let worst='none', low=0;
+  [['am',a.FEEL_AM],['mid',a.FEEL_MID],['pm',a.FEEL_PM],['nt',a.FEEL_NT]].forEach(([k,v])=>{ if(v!==undefined && v!=='' && +v<0 && +v<=low){ low=+v; worst=k; } });
+  d.worst=worst;
+  const v1=a.V1, v5=a.V5;
+  const t1={L:'นักวางแผน',R:'สายด้นสด'}[v1], t5={L:'ชาร์จพลังในที่เงียบ',R:'ชอบออกไปข้างนอก'}[v5];
+  d.styleTag = (v1==='L'&&v5==='R')?1:(v1==='L'&&v5==='L')?2:(v1==='R'&&v5==='R')?3:(v1==='R'&&v5==='L')?4:0;
+  d.style = ['', 'นักวางแผนสายออกไปข้างนอก','นักวางแผนสายพักเงียบ','สายด้นสดที่ชอบออกไปข้างนอก','สายด้นสดที่ชาร์จพลังในที่เงียบ'][d.styleTag] || (t1||t5||'ยืดหยุ่นได้ทุกแบบ');
+  d.pose = ['down','up','down','wave','hug'][d.styleTag];
+  const top=a.ACT_TOP1, info=ACT_INFO[top];
+  d.top1 = top || '';
+  d.group = info ? info.group : (top ? 'other' : 'none');
+  d.prop = top ? (info ? info.icon : 'star') : null;
+  d.cls = info ? info.cls : (top ? 'สายไม่ซ้ำใคร' : 'สายเก็บพลัง');
+  d.time1 = Array.isArray(a.ACT1_TIME) ? a.ACT1_TIME : [];
+  return d;
+}
+const CARDS={
+  1:['นกเช้าตรงจังหวะ','คุณตื่นตัวเร็ว และวันทำงานกับวันหยุดเดินจังหวะใกล้กัน','morning'],
+  2:['นกเช้าที่วันลากยาว','จังหวะของคุณค่อนไปทางเช้า แต่วันทำงานกับวันหยุด เวลานอนต่างกันพอสมควร','morning'],
+  3:['จังหวะกลางที่มั่นคง','คุณไม่สุดทางเช้าหรือค่ำ และเวลานอนค่อนข้างสม่ำเสมอ','noon'],
+  4:['จังหวะกลางที่งานคอยเลื่อน','จังหวะของคุณอยู่ตรงกลาง แต่ตารางงานทำให้วันทำงานกับวันหยุดเวลานอนต่างกัน','noon'],
+  5:['นกฮูกที่จัดวันได้เอง','คุณทำงานได้ดีช่วงค่ำ และจัดวันให้เข้ากับจังหวะของตัวเองได้','night'],
+  6:['นกฮูกในโลกเก้าโมงเช้า','คุณทำงานได้ดีช่วงค่ำ แต่วันทำงานดึงให้ตื่นเร็วกว่าที่จังหวะของคุณชอบ','night']
+};
+/* ฉากและเพื่อนร่วมทางของแต่ละแบบ (ทุกแบบมีองค์ประกอบเท่ากัน) */
+const CARD_SCENE={
+  1:{sky:'morning', buddy:'lark'},
+  2:{sky:'dawn',    buddy:'lark', moon:[.82,.2]},
+  3:{sky:'noon',    buddy:'cat'},
+  4:{sky:'dusk',    buddy:'cat',  sun:[.22,.6,'#FF8A4C'], moon:[.8,.18]},
+  5:{sky:'night',   buddy:'owl'},
+  6:{sky:'morning', buddy:'owl',  moon:[.82,.16]}
+};
+const TIPS={
+  am:['ช่วงเช้า','ลองออกไปเดินข้างนอกสักสิบนาทีก่อนเปิดจอ แสงธรรมชาติเป็นสัญญาณเวลาหลักของนาฬิกาชีวภาพ','Wright et al. (2013)'],
+  mid:['ช่วงกลางวัน','ลองเดินสั้น ๆ หลังมื้อเที่ยง หรือลุกเดินสักสองสามนาทีหลังจบประชุม','Dunstan et al. (2012); Reynolds et al. (2016)'],
+  pm:['ช่วงเย็น','ลองปิดโน้ตบุ๊กแล้วออกไปขยับร่างกายสัก 20–30 นาที ช่วงเย็นเป็นช่วงที่คนทำงานมีเวลามากที่สุด','Bull et al. (2020)'],
+  nt:['ช่วงค่ำ','ลองยืดเหยียดเบา ๆ สักห้านาที แล้วหรี่ไฟลง แสงจ้ายามค่ำกดการหลั่งเมลาโทนิน','Chang et al. (2015)'],
+  none:['','วันนั้นไม่มีช่วงที่ติดขัดชัดเจน ลองสังเกตต่อว่าช่วงไหนของวันที่คุณอยากขยับร่างกายมากที่สุด','']
+};
+
+/* =================================================================== */
+/* RESULT CARD 1080×1920                                               */
+/* =================================================================== */
+function wrapText(ctx, text, maxW){
+  const out=[]; let line='';
+  const seg = (window.Intl && Intl.Segmenter) ? Array.from(new Intl.Segmenter('th',{granularity:'word'}).segment(text)).map(s=>s.segment) : text.split('');
+  seg.forEach(w=>{ const t=line+w; if(ctx.measureText(t).width>maxW && line){ out.push(line.trim()); line=w.trimStart(); } else line=t; });
+  if(line.trim()) out.push(line.trim()); return out;
+}
+function pxBox(x, X, Y, W, H, fill, k, u){ u=u||8; k=k||PAL.k;
+  x.fillStyle=k; x.fillRect(X+u,Y,W-2*u,H); x.fillRect(X,Y+u,W,H-2*u);
+  x.fillStyle=fill; x.fillRect(X+u,Y+u,W-2*u,H-2*u); }
+async function drawCard(d){
+  const F='"IBM Plex Sans Thai"';
+  try{ await document.fonts.load('700 80px '+F); await document.fonts.load('400 40px '+F); await document.fonts.load('400 40px "VT323"'); }catch(e){}
+  const c=document.createElement('canvas'); c.width=1080; c.height=1920; const x=c.getContext('2d'); x.imageSmoothingEnabled=false;
+  const card=CARDS[d.card]||CARDS[3]; const cs=CARD_SCENE[d.card]||CARD_SCENE[3];
+  // พื้นหลังลายตาราง
+  x.fillStyle='#2A2240'; x.fillRect(0,0,1080,1920);
+  x.fillStyle='#322A4E'; for(let yy=0;yy<1920;yy+=24) for(let xx=(yy/24)%2*24;xx<1080;xx+=48) x.fillRect(xx,yy,24,24);
+  // หัว
+  x.fillStyle='#FFD866'; x.font='400 44px "VT323", monospace'; x.textBaseline='top'; x.fillText("A CREATOR'S DAY",72,52);
+  x.fillStyle='#FFFFFF'; x.font='700 44px '+F; x.fillText('ตัวละครของฉัน',72,98);
+  // ฉาก
+  const SX=64, SY=176, SW=952, SH=824;
+  pxBox(x, SX-8, SY-8, SW+16, SH+16, '#000', '#FFFAEB', 8);
+  const sc=document.createElement('canvas'); sc.width=119; sc.height=103; const sx=sc.getContext('2d');
+  drawScene(sx, 119, 103, cs.sky, 88, {seed: 3+d.card, sun: cs.sun || (SKY[cs.sky].sun), moon: cs.moon || (SKY[cs.sky].moon)});
+  x.drawImage(sc, SX, SY, SW, SH);
+  // ตัวละคร + เพื่อน
+  const ch=document.createElement('canvas'); ch.width=40; ch.height=46; drawChar(ch.getContext('2d'), Object.assign({outfit:d.group, pose:d.pose, prop:d.prop}, d.av||{}), 1, 0, 0);
+  const groundPx = SY + 88*8; const CS=15;
+  x.globalAlpha=.22; x.fillStyle='#000'; x.fillRect(SX+400-150, groundPx-4, 300, 16); x.globalAlpha=1;
+  x.drawImage(ch, SX+400-19.5*CS, groundPx - 43*CS + 6, 40*CS, 46*CS);
+  const bd=document.createElement('canvas'); bd.width=16; bd.height=14; blit(bd.getContext('2d'), BUDDY[cs.buddy], 0, 0, 1);
+  x.drawImage(bd, SX+SW-250, groundPx - 13*10 + 4, 160, 140);
+  // ชื่อ
+  const NY=1044;
+  pxBox(x, 56, NY, 968, 210, '#FFD866', '#FFFAEB', 8);
+  x.fillStyle='#2A2240'; x.font='700 74px '+F; x.textAlign='center';
+  wrapText(x, card[0], 900).slice(0,1).forEach(l=>x.fillText(l,540,NY+26));
+  x.font='600 40px '+F; x.fillText(d.cls+' · '+d.style, 540, NY+132, 920);
+  x.textAlign='left';
+  // สเตตัส
+  const BY=1290, BH=470;
+  pxBox(x, 56, BY, 968, BH, '#FFFAEB', '#FFFAEB', 8);
+  let y=BY+34;
+  const row=(icon, lab, val)=>{ const ic=document.createElement('canvas'); ic.width=12; ic.height=12; blit(ic.getContext('2d'), ICONS[icon]||ICONS.star,0,0,1); x.drawImage(ic, 96, y+4, 60, 60);
+    x.fillStyle='#5B5475'; x.font='500 32px '+F; x.fillText(lab, 180, y); x.fillStyle='#2A2240'; x.font='700 40px '+F; x.fillText(val, 180, y+40, 800); y+=112; };
+  row(d.prop||'star', 'ไอเทมประจำตัว', d.top1 ? actName(d.top1) : 'ยังว่าง พร้อมเก็บชิ้นแรก');
+  row('clock', 'ช่วงที่ลงมือบ่อย', d.time1.length ? d.time1.join(' · ') : '—');
+  const tip=TIPS[d.worst]||TIPS.none;
+  row('bulb', tip[0] ? 'ทริกสำหรับ'+tip[0] : 'ทริกประจำวัน', '');
+  y-=64; x.fillStyle='#2A2240'; x.font='400 34px '+F;
+  wrapText(x, tip[1], 820).slice(0,3).forEach(l=>{ x.fillText(l,180,y); y+=46; });
+  if (tip[2]){ x.fillStyle='#5B5475'; x.font='400 26px '+F; x.fillText('อ้างอิง: '+tip[2],180,y+4); }
+  // ท้าย
+  x.fillStyle='#CFC8E6'; x.font='400 28px '+F;
+  x.fillText('การ์ดนี้ไม่ใช่การวินิจฉัยทางการแพทย์', 72, 1782);
+  x.font='400 24px '+F; let fy=1822;
+  wrapText(x, 'ส่วนหนึ่งของงานวิจัยเรื่อง การออกแบบแบรนด์สินค้าไลฟ์สไตล์จากแนวคิดการทำงานของฮอร์โมนที่สอดคล้องกับพฤติกรรมในชีวิตประจำวันของกลุ่มสายอาชีพนักสร้างสรรค์', 936).slice(0,2).forEach(l=>{ x.fillText(l,72,fy); fy+=34; });
+  return c.toDataURL('image/png');
+}
+async function showResult(){
+  const d=S.derived; const card=CARDS[d.card]||CARDS[3];
+  document.getElementById('hud').classList.add('hidden'); document.getElementById('scene').classList.add('hidden');
+  curSky=null; setSky((CARD_SCENE[d.card]||CARD_SCENE[3]).sky);
+  const {content}=frame({q:card[0]},{hint:'ตัวละครของคุณ บันทึกภาพไปแชร์ได้เลย'});
+  const loading=h('div',{class:'loading'}, charCanvas(Object.assign({outfit:'base',pose:'wave'},av())), 'กำลังสร้างตัวละคร…');
+  content.append(loading);
+  const src = await drawCard(d);
+  await new Promise(r=>setTimeout(r,500));
+  loading.remove();
+  const img=h('img',{alt:'ตัวละคร '+card[0],class:'pb'}); img.src=src;
+  const res=h('div',{class:'result'}, img);
+  content.append(res);
+  const share = APP_URL ? APP_URL+'?src=share' : '';
+  const dl=h('a',{class:'btn',href:src,download:'creator-day.png',style:'text-align:center;text-decoration:none;margin-top:16px'},'บันทึกภาพ');
+  res.append(h('p',{style:'margin-top:14px'},card[1]+' ถ้าปุ่มบันทึกภาพไม่ทำงานบนมือถือ ให้กดค้างที่ภาพแล้วเลือกบันทึก'), dl);
+  if (share){
+    const cp=h('button',{class:'btn ghost',type:'button'},'คัดลอกลิงก์ชวนเพื่อนมาเล่น');
+    cp.addEventListener('click',async()=>{ try{ await navigator.clipboard.writeText(share); cp.textContent='คัดลอกลิงก์แล้ว'; }catch(e){ prompt('คัดลอกลิงก์นี้', share); } });
+    res.append(cp);
+  }
+  const form=(title, desc, type, ph)=>{
+    const inp=h('input',{type:'text',maxlength:'120',placeholder:ph,'aria-label':title});
+    const st=h('p',{});
+    const b=h('button',{class:'pb',type:'button'},'ส่ง');
+    b.addEventListener('click',()=>{
+      if (inp.value.trim().length<3){ st.textContent='กรอกอีเมลหรือ LINE ID'; st.className='err'; return; }
+      b.disabled=true;
+      runServer3('saveContact', S.resultId, type, inp.value.trim(), ()=>{ st.textContent='บันทึกแล้ว ขอบคุณ'; st.className='ok'; inp.disabled=true; },
+        err=>{ b.disabled=false; st.textContent='ส่งไม่สำเร็จ ลองอีกครั้ง'; st.className='err'; });
+    });
+    return h('div',{}, h('h2',{},title), h('p',{},desc), h('div',{class:'inrow'},inp,b), st);
+  };
+  res.append(
+    form('อยากคุยกับผู้วิจัยต่อไหม','สัมภาษณ์ประมาณ 60 นาที แบบพบตัวหรือออนไลน์ ถ้ายินยอมให้ติดต่อ กรอกอีเมลหรือ LINE ID ไว้ ผู้วิจัยจะเลือกผู้ให้สัมภาษณ์ให้หลากหลายตามคำตอบในเกมนี้','interview','อีเมลหรือ LINE ID'),
+    form('อยากได้สรุปผลวิจัยไหม','ส่งให้ทางอีเมลเมื่องานวิจัยเสร็จ','summary','อีเมล'),
+    h('p',{style:'margin:24px 3px 30px'},'ขอบคุณที่ช่วยงานวิจัยนี้ ช่องทางติดต่อเก็บแยกจากคำตอบ และลบเมื่อใช้งานเสร็จ มีคำถามติดต่อผู้วิจัยได้ที่ ', h('a',{href:'mailto:6880018135@student.chula.ac.th'},'6880018135@student.chula.ac.th'))
+  );
+}
+
+/* ---------- start ---------- */
+load();
+drawWalker(0);
+go(S.consent ? S.idx : 0, true);
+</script>
+</body>
+</html>
