@@ -3,7 +3,7 @@
 <head>
 <base target="_top">
 <title>หนึ่งวันของครีเอเตอร์</title>
-<meta name="description" content="แบบสอบถามเชิงเกม pixel art สำหรับคนทำงานสายครีเอทีฟ ใช้เวลาประมาณ 10–12 นาที">
+<meta name="description" content="แบบสอบถามเชิงเกม pixel art สำหรับคนทำงานสายครีเอทีฟ ใช้เวลาประมาณ 15 นาที">
 <meta property="og:title" content="หนึ่งวันของครีเอเตอร์">
 <meta property="og:description" content="ย้อนเล่นวันทำงานล่าสุดของคุณ แล้วรับการ์ดตัวละครไว้แชร์">
 <meta property="og:type" content="website">
@@ -533,6 +533,7 @@ function go(i, fromBack){
   }
   if (!fromBack && scr.si !== lastScene && lastScene !== -1 && scr.si > 1 && scr.it.type!=='submit') interstitial(scr);
   lastScene = scr.si;
+  if (scr.si >= 1) logStep(scr.si + 1); else if (S.consent) logStep(1); else logStep(0);
   RENDER[scr.it.type](scr.it);
   const sh=document.getElementById('sheet'); if (sh) sh.scrollTop=0;
 }
@@ -590,7 +591,7 @@ const RENDER = {
         lineup,
         h('p',{class:'teaser'},'มีตัวละครมากกว่า 100 แบบ เล่นจนจบแล้วดูว่าวันของคุณได้ตัวไหน'),
         h('div',{class:'introtxt pb'},
-          h('p',{},'ย้อนเล่นวันทำงานล่าสุดของคุณทีละด่าน ตั้งแต่ตื่นจนเข้านอน เก็บกิจกรรมใส่กระเป๋า แล้วรับตัวละครไว้แชร์ตอนจบ ใช้เวลาประมาณ 10–12 นาที'),
+          h('p',{},'ย้อนเล่นวันทำงานล่าสุดของคุณทีละด่าน ตั้งแต่ตื่นจนเข้านอน เก็บกิจกรรมใส่กระเป๋า แล้วรับตัวละครไว้แชร์ตอนจบ ใช้เวลาประมาณ 15 นาที'),
           h('p',{class:'small'},'แบบสอบถามนี้เป็นส่วนหนึ่งของวิทยานิพนธ์ เรื่องการออกแบบแบรนด์สินค้าไลฟ์สไตล์จากแนวคิดการทำงานของฮอร์โมนที่สอดคล้องกับพฤติกรรมในชีวิตประจำวันของกลุ่มสายอาชีพนักสร้างสรรค์'))
       ),
       h('div',{class:'introfoot'}, h('button',{class:'btn',type:'button',onclick:advance},'▶ เริ่มเกม'))
@@ -618,7 +619,7 @@ const RENDER = {
     const {content, footer}=frame({q:'ก่อนเริ่ม ขออนุญาตเล่าให้ฟังสั้น ๆ'});
     content.append(h('div',{class:'consent'},
       h('p',{},'แบบสอบถามนี้เป็นส่วนหนึ่งของวิทยานิพนธ์ระดับมหาบัณฑิต เรื่องการออกแบบแบรนด์สินค้าไลฟ์สไตล์จากแนวคิดการทำงานของฮอร์โมนที่สอดคล้องกับพฤติกรรมในชีวิตประจำวันของกลุ่มสายอาชีพนักสร้างสรรค์'),
-      h('p',{},'ใช้เวลาประมาณ 10–12 นาที ไม่เก็บชื่อ และไม่ถามข้อมูลสุขภาพหรือโรคประจำตัว คำถามเรื่องเพศ ผู้ที่อยู่ด้วย และรายได้ อยู่ท้ายเกมและข้ามได้ทุกข้อ คำตอบจะถูกวิเคราะห์เป็นภาพรวมเท่านั้น คุณหยุดเล่นได้ทุกเมื่อ คำตอบที่ยังไม่กดส่งจะไม่ถูกบันทึก'),
+      h('p',{},'ใช้เวลาประมาณ 15 นาที ไม่เก็บชื่อ และไม่ถามข้อมูลสุขภาพหรือโรคประจำตัว คำถามเรื่องเพศ ผู้ที่อยู่ด้วย และรายได้ อยู่ท้ายเกมและข้ามได้ทุกข้อ คำตอบจะถูกวิเคราะห์เป็นภาพรวมเท่านั้น คุณหยุดเล่นได้ทุกเมื่อ คำตอบที่ยังไม่กดส่งจะไม่ถูกบันทึก ระบบบันทึกเพียงว่าเล่นถึงด่านไหน (ไม่บันทึกคำตอบ) เพื่อนำไปปรับปรุงแบบสอบถาม'),
       h('p',{},'ข้อมูลเก็บในบัญชี Google ของผู้วิจัย ไม่เปิดเผยต่อบุคคลอื่น และจะลบเมื่อวิทยานิพนธ์เสร็จสิ้น ช่องทางติดต่อที่คุณกรอกเพื่อสมัครสัมภาษณ์หรือรับสรุปผล จะเก็บแยกจากคำตอบและลบเมื่อใช้งานเสร็จ หากมีคำถามเกี่ยวกับงานวิจัย ติดต่อผู้วิจัยได้ตามข้อมูลด้านล่าง')
     ),
     h('div',{class:'researcher pb'}, h('b',{},'ผู้วิจัย'), h('p',{},'ปิยะนนท์ รอดแสน'), h('p',{},'นักศึกษาปริญญาโท หลักสูตรศิลปกรรมศาสตรมหาบัณฑิต'), h('p',{},'สาขาวิชานฤมิตศิลป์'), h('p',{},'คณะศิลปกรรมศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย'), h('p',{},'อีเมล ', h('a',{href:'mailto:6880018135@student.chula.ac.th'},'6880018135@student.chula.ac.th'))));
@@ -628,7 +629,7 @@ const RENDER = {
     c1.checked=S.consent; c2.checked=S.age18;
     content.append(h('label',{class:'check pb'},c1,h('span',{},'ฉันเข้าใจข้อมูลข้างต้น และยินยอมเข้าร่วม')),
                    h('label',{class:'check pb'},c2,h('span',{},'ฉันอายุ 18 ปีขึ้นไป')));
-    btn.addEventListener('click',()=>{ S.consent=true; S.age18=true; if(!S.tsStart) S.tsStart=new Date().toISOString(); advance(); });
+    btn.addEventListener('click',()=>{ S.consent=true; S.age18=true; if(!S.tsStart) S.tsStart=new Date().toISOString(); logStep(1); advance(); });
     upd(); footer.append(btn);
   },
   single(it){
@@ -917,7 +918,7 @@ const RENDER = {
     b.addEventListener('click',()=>{
       b.disabled=true; b.textContent='กำลังบันทึก…'; msg.textContent='';
       const payload={ consent:S.consent, age18:S.age18, tsStart:S.tsStart, src:SRC, device:isMobile?'mobile':'desktop', answers:cleanAnswers() };
-      runServer('submitResponse', payload, res=>{ S.resultId=res.id; S.derived=derive(payload.answers); S.derived.av=av(); try{ sessionStorage.removeItem('odc2'); }catch(e){} showResult(); },
+      runServer('submitResponse', payload, res=>{ S.resultId=res.id; PROG_DONE=true; logStep(SURVEY.scenes.length + 1); S.derived=derive(payload.answers); S.derived.av=av(); try{ sessionStorage.removeItem('odc2'); }catch(e){} showResult(); },
         err=>{ b.disabled=false; b.textContent='ลองส่งอีกครั้ง'; msg.textContent='ส่งไม่สำเร็จ: '+(err && err.message || err)+' ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วกดส่งอีกครั้ง'; msg.className='err'; });
     });
     footer.append(b);
@@ -963,6 +964,25 @@ function runServer(fn, arg, ok, fail){
   else if (window.MOCK_SERVER) MOCK_SERVER(fn, arg, ok, fail);
   else fail(new Error('ไม่พบเซิร์ฟเวอร์'));
 }
+/* l: บันทึกความคืบหน้า (ไม่ส่งคำตอบ) */
+const SID = (()=>{ try{ let v=sessionStorage.getItem('odc_sid'); if(!v){ v=Date.now().toString(36)+Math.random().toString(36).slice(2,8); sessionStorage.setItem('odc_sid',v); } return v; }catch(e){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); } })();
+const SENT_STEPS = new Set();
+let PROG_DONE = false;
+function scrId(it){ return it.id || (it.ids && it.ids[0]) || (it.cards && it.cards[0] && it.cards[0][0]) || (it.pairs && it.pairs[0] && it.pairs[0][0]) || it.type; }
+function progBody(step, extra){ return JSON.stringify({fn:'progress', payload:Object.assign({sid:SID, step:step, src:SRC, device:isMobile?'mobile':'desktop', screen:scrId(SCREENS[S.idx].it)}, extra||{})}); }
+function logStep(step){
+  if (SENT_STEPS.has(step)) return; SENT_STEPS.add(step);
+  try{
+    if (window.google && google.script && google.script.run) { const b=JSON.parse(progBody(step)); google.script.run.withFailureHandler(()=>{}).logProgress(b.payload); }
+    else if (window.API_URL) fetch(window.API_URL,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:progBody(step)}).catch(()=>{});
+  }catch(e){}
+}
+function logLeave(){
+  if (PROG_DONE || !window.API_URL || !navigator.sendBeacon) return;
+  try{ navigator.sendBeacon(window.API_URL, progBody(Math.max(0, ...SENT_STEPS), {leave:1})); }catch(e){}
+}
+addEventListener('pagehide', logLeave);
+document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState==='hidden') logLeave(); });
 function runServer3(fn, a, b, c, ok, fail){
   if (window.google && google.script && google.script.run) google.script.run.withSuccessHandler(ok).withFailureHandler(fail)[fn](a,b,c);
   else if (window.API_URL) postApi(fn,{args:[a,b,c]}).then(ok,fail);
